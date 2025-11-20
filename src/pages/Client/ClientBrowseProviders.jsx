@@ -1,0 +1,559 @@
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import ProviderCards from "../../components/ProviderCards";
+import { searchProviders } from "../../api/providers";
+import {
+  createDirectJob,
+  getDirectJobs,
+  updateDirectJobStatus,
+} from "../../api/directJobs";
+
+const skillOptions = [
+  { value: "", label: "All occupations" },
+  { value: "electrician", label: "Electrician" },
+  { value: "plumber", label: "Plumber" },
+  { value: "tutor", label: "Tutor" },
+  { value: "carpenter", label: "Carpenter" },
+  { value: "tailor", label: "Tailor" },
+  { value: "cleaner", label: "Cleaner" },
+  { value: "cook", label: "Cook" },
+  { value: "acRepairMan", label: "AC Repair Specialist" },
+];
+
+const inviteInitialState = {
+  title: "",
+  description: "",
+  budget: "",
+  location: "",
+  preferredDate: "",
+  notes: "",
+};
+
+export default function ClientBrowseProviders() {
+  const [filters, setFilters] = useState({
+    search: "",
+    skill: "",
+    location: "",
+    minRating: "",
+    maxRate: "",
+    minExperience: "",
+    sort: "rating",
+  });
+  const [inviteTarget, setInviteTarget] = useState(null);
+  const [inviteForm, setInviteForm] = useState(inviteInitialState);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const providersQuery = useQuery({
+    queryKey: ["provider-search", filters],
+    queryFn: () =>
+      searchProviders({
+        search: filters.search || undefined,
+        skill: filters.skill || undefined,
+        location: filters.location || undefined,
+        minRating: filters.minRating || undefined,
+        maxHourlyRate: filters.maxRate || undefined,
+        minExperience: filters.minExperience || undefined,
+        sort: filters.sort,
+      }),
+    staleTime: 30_000,
+  });
+
+  const directJobsQuery = useQuery({
+    queryKey: ["direct-jobs", "client"],
+    queryFn: () => getDirectJobs({ scope: "client" }),
+    staleTime: 15_000,
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: createDirectJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["direct-jobs", "client"] });
+      setInviteForm(inviteInitialState);
+      setInviteTarget(null);
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: updateDirectJobStatus,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["direct-jobs", "client"] });
+    },
+  });
+
+  const providers = providersQuery.data?.providers ?? [];
+  const directJobs = directJobsQuery.data?.directJobs ?? [];
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleInviteInput = (event) => {
+    const { name, value } = event.target;
+    setInviteForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleInviteSubmit = async (event) => {
+    event.preventDefault();
+    if (!inviteTarget?._id) return;
+    await inviteMutation.mutateAsync({
+      providerId: inviteTarget._id,
+      ...inviteForm,
+      budget: inviteForm.budget ? Number(inviteForm.budget) : undefined,
+    });
+  };
+
+  const pendingInvites = useMemo(
+    () =>
+      directJobs.filter((job) =>
+        ["requested", "in-progress"].includes(job.status)
+      ),
+    [directJobs]
+  );
+
+  const historyInvites = useMemo(
+    () =>
+      directJobs.filter((job) =>
+        ["completed", "declined", "cancelled"].includes(job.status)
+      ),
+    [directJobs]
+  );
+
+  return (
+    <div className="py-2 overflow-y-auto md:px-6 lg:px-20 mt-2 space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold">Discover Providers</h1>
+        <p className="text-gray-500">
+          Search the entire provider network, chat instantly, or send a direct
+          job invitation.
+        </p>
+      </header>
+
+      <section className="p-4 rounded-2xl border border-gray-200 bg-white space-y-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label className="text-sm font-semibold text-gray-600">
+              Search
+            </label>
+            <input
+              type="text"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder="Name, skill, or keyword"
+              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-600">
+              Occupation
+            </label>
+            <select
+              name="skill"
+              value={filters.skill}
+              onChange={handleFilterChange}
+              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
+            >
+              {skillOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-600">
+              Location
+            </label>
+            <input
+              type="text"
+              name="location"
+              value={filters.location}
+              onChange={handleFilterChange}
+              placeholder="e.g., Dhanmondi"
+              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+          <div>
+            <label className="text-sm font-semibold text-gray-600">
+              Min rating
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={5}
+              step={0.5}
+              name="minRating"
+              value={filters.minRating}
+              onChange={handleFilterChange}
+              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-600">
+              Max hourly rate (৳)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={100}
+              name="maxRate"
+              value={filters.maxRate}
+              onChange={handleFilterChange}
+              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-600">
+              Min experience (years)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={50}
+              name="minExperience"
+              value={filters.minExperience}
+              onChange={handleFilterChange}
+              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-600">
+              Sort by
+            </label>
+            <select
+              name="sort"
+              value={filters.sort}
+              onChange={handleFilterChange}
+              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
+            >
+              <option value="rating">Top rated</option>
+              <option value="experience">Experience</option>
+              <option value="budget">Budget friendly</option>
+              <option value="newest">Recently joined</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-700">
+            Providers near you
+          </h2>
+          <button
+            type="button"
+            onClick={() => setFilters((prev) => ({ ...prev, search: "", location: "", minRating: "", maxRate: "", minExperience: "", skill: "" }))}
+            className="text-sm text-blue-600 font-semibold hover:underline"
+          >
+            Reset filters
+          </button>
+        </div>
+        {providersQuery.isLoading ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-40 rounded-2xl border border-gray-200 bg-gray-50 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : providers.length === 0 ? (
+          <p className="text-gray-400 text-sm">
+            No providers found. Try adjusting the filters.
+          </p>
+        ) : (
+          <div className="flex flex-col lg:flex-row flex-wrap gap-3">
+            <ProviderCards
+              providers={providers}
+              onContact={(provider) =>
+                navigate(`/client/chat?user=${provider._id}`)
+              }
+              onHire={(provider) => {
+                setInviteTarget(provider);
+                setInviteForm((prev) => ({
+                  ...prev,
+                  title: `Work request for ${provider.primarySkill || "job"}`,
+                }));
+              }}
+              contactLabel="Message"
+              hireLabel="Send Invite"
+            />
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Direct invitations
+            </h2>
+            <p className="text-sm text-gray-500">
+              Track every invitation you send outside the job board.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {pendingInvites.length === 0 ? (
+            <p className="text-gray-400 text-sm">
+              No active invitations yet. Invite a provider to start a job
+              privately.
+            </p>
+          ) : (
+            pendingInvites.map((job) => (
+              <DirectJobCard
+                key={job._id}
+                job={job}
+                onMessage={() =>
+                  navigate(`/client/chat?user=${job.provider?._id}`)
+                }
+                onCancel={() =>
+                  cancelMutation.mutate({
+                    directJobId: job._id,
+                    action: "cancel",
+                  })
+                }
+                isCancelling={cancelMutation.isPending}
+                showCancel
+              />
+            ))
+          )}
+        </div>
+
+        {historyInvites.length ? (
+          <div className="space-y-2">
+            <h3 className="text-md font-semibold text-gray-700">History</h3>
+            {historyInvites.map((job) => (
+              <DirectJobCard key={job._id} job={job} />
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      {inviteTarget ? (
+        <InviteProviderModal
+          provider={inviteTarget}
+          formData={inviteForm}
+          onChange={handleInviteInput}
+          onClose={() => {
+            if (inviteMutation.isPending) return;
+            setInviteTarget(null);
+          }}
+          onSubmit={handleInviteSubmit}
+          isSubmitting={inviteMutation.isPending}
+          error={inviteMutation.error?.response?.data?.message}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function DirectJobCard({ job, onMessage, onCancel, showCancel, isCancelling }) {
+  return (
+    <div className="p-4 rounded-2xl border border-gray-200 bg-white flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-400 uppercase tracking-wide">
+            {job.provider?.name}
+          </p>
+          <h4 className="text-lg font-semibold text-gray-900">{job.title}</h4>
+        </div>
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+            job.status === "completed"
+              ? "bg-green-100 text-green-700"
+              : job.status === "in-progress"
+              ? "bg-blue-100 text-blue-700"
+              : job.status === "requested"
+              ? "bg-orange-100 text-orange-700"
+              : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {job.status.replace("-", " ")}
+        </span>
+      </div>
+      <p className="text-sm text-gray-500 line-clamp-3">{job.description}</p>
+      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+        {job.budget ? (
+          <span className="font-semibold text-green-600">
+            Budget: ৳{job.budget}
+          </span>
+        ) : null}
+        {job.location ? <span>{job.location}</span> : null}
+        {job.preferredDate ? (
+          <span>
+            Target date: {new Date(job.preferredDate).toLocaleDateString()}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2 pt-2">
+        {onMessage ? (
+          <button
+            type="button"
+            onClick={onMessage}
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-green-500 hover:text-white transition-colors"
+          >
+            Message
+          </button>
+        ) : null}
+        {showCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isCancelling}
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-red-600 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+          >
+            {isCancelling ? "Cancelling..." : "Cancel invite"}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function InviteProviderModal({
+  provider,
+  formData,
+  onChange,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  error,
+}) {
+  if (!provider) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6 space-y-4 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        >
+          ×
+        </button>
+        <div>
+          <p className="text-sm text-gray-500">Invite</p>
+          <h2 className="text-2xl font-semibold text-gray-900">
+            {provider.name}
+          </h2>
+          <p className="text-gray-500 text-sm">
+            This request goes straight to the provider. It won't appear on the
+            public job board.
+          </p>
+        </div>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">
+                Job title
+              </span>
+              <input
+                name="title"
+                value={formData.title}
+                onChange={onChange}
+                required
+                placeholder="e.g., Fix kitchen wiring"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">
+                Budget (BDT)
+              </span>
+              <input
+                type="number"
+                min={0}
+                name="budget"
+                value={formData.budget}
+                onChange={onChange}
+                placeholder="Optional"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-gray-700">
+              Description
+            </span>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={onChange}
+              rows={4}
+              required
+              placeholder="Describe the scope, materials, schedule expectations..."
+              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-y"
+            />
+          </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">
+                Location
+              </span>
+              <input
+                name="location"
+                value={formData.location}
+                onChange={onChange}
+                placeholder="e.g., Dhanmondi, Dhaka"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">
+                Preferred date
+              </span>
+              <input
+                type="date"
+                name="preferredDate"
+                value={formData.preferredDate}
+                onChange={onChange}
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-gray-700">
+              Notes (optional)
+            </span>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={onChange}
+              rows={3}
+              placeholder="Any extra requirements or helpful context"
+              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-y"
+            />
+          </label>
+          {error ? (
+            <p className="text-sm text-red-500 font-semibold">{error}</p>
+          ) : null}
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-teal-500 text-white font-semibold hover:opacity-90 disabled:opacity-60"
+            >
+              {isSubmitting ? "Sending..." : "Send invite"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+

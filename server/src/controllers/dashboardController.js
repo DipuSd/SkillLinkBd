@@ -1,0 +1,282 @@
+const mongoose = require("mongoose");
+const Job = require("../models/Job");
+const Application = require("../models/Application");
+const Notification = require("../models/Notification");
+const Report = require("../models/Report");
+const Review = require("../models/Review");
+const User = require("../models/User");
+const asyncHandler = require("../utils/asyncHandler");
+
+const mapProviderSummary = (provider) => ({
+  _id: provider.id,
+  name: provider.name,
+  primarySkill: provider.skills?.[0] ?? "",
+  skills: provider.skills,
+  rating: provider.rating,
+  completedJobs: provider.completedJobs,
+  experience: provider.experienceYears,
+  hourlyRate: provider.hourlyRate,
+  status: provider.status === "active" ? "available" : "unavailable",
+  location: provider.location,
+  avatarUrl: provider.avatarUrl,
+});
+
+exports.getClientDashboard = asyncHandler(async (req, res) => {
+  const jobs = await Job.find({ client: req.user.id })
+    .sort({ createdAt: -1 })
+    .limit(100);
+
+  const activeJobs = jobs.filter((job) => job.status === "open");
+  const completedJobs = jobs.filter((job) => job.status === "completed");
+
+  const metrics = {
+    activeJobs: activeJobs.length,
+    totalApplicants: jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0),
+    completedJobs: completedJobs.length,
+    totalSpent: completedJobs.reduce((sum, job) => sum + (job.budget || 0), 0),
+  };
+
+  const requiredSkills = [...new Set(activeJobs.map((job) => job.requiredSkill))];
+
+  const recommendedProviders = await User.find({
+    role: "provider",
+    status: "active",
+    ...(requiredSkills.length
+      ? { skills: { $in: requiredSkills } }
+      : {}),
+  })
+    .sort({ rating: -1, completedJobs: -1 })
+    .limit(6);
+
+  res.json({
+    metrics,
+    recommendedProviders: recommendedProviders.map(mapProviderSummary),
+    activeJobs,
+  });
+});
+
+exports.getProviderDashboard = asyncHandler(async (req, res) => {
+  const providerId = req.user.id;
+
+  const activeApplications = await Application.countDocuments({
+    provider: providerId,
+    status: { $in: ["applied", "shortlisted", "hired"] },
+  });
+
+  const completedJobs = await Job.countDocuments({
+    assignedProvider: providerId,
+    status: "completed",
+  });
+
+  const totalEarningsAgg = await Job.aggregate([
+    { $match: { assignedProvider: new mongoose.Types.ObjectId(providerId), status: "completed" } },
+    { $group: { _id: null, total: { $sum: "$budget" } } },
+  ]);
+
+  const totalEarnings = totalEarningsAgg[0]?.total ?? 0;
+
+  const ongoingJobs = await Job.find({
+    assignedProvider: providerId,
+    status: "in-progress",
+  })
+    .sort({ updatedAt: -1 })
+    .limit(5)
+    .populate({ path: "client", select: "name" });
+
+  const recentNotifications = await Notification.find({ recipient: providerId })
+    .sort({ createdAt: -1 })
+    .limit(4);
+
+  res.json({
+    welcomeMessage: `Hello ${req.user.name.split(" ")[0] || "there"}!`,
+    subheading: "You have personalised job recommendations waiting.",
+    metrics: {
+      activeApplications,
+      completedJobs,
+      totalEarnings,
+      averageRating: req.user.rating || 0,
+    },
+    ongoingJobs: ongoingJobs.map((job) => ({
+      _id: job.id,
+      title: job.title,
+      status: job.status,
+      clientName: job.client?.name,
+    })),
+    recentNotifications: recentNotifications.map((notification) => ({
+      _id: notification.id,
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      timeStamp: notification.createdAt,
+      isRead: notification.isRead,
+    })),
+  });
+});
+
+exports.getAdminDashboard = asyncHandler(async (_req, res) => {
+  const [totalUsers, activeJobs, pendingReportsCount, revenueAgg] = await Promise.all([
+    User.countDocuments(),
+    Job.countDocuments({ status: { $in: ["open", "in-progress"] } }),
+    Report.countDocuments({ status: "pending" }),
+    Job.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, revenue: { $sum: "$budget" } } },
+    ]),
+  ]);
+
+  const pendingReports = await Report.find({ status: "pending" })
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+  const topProviders = await User.find({ role: "provider" })
+    .sort({ rating: -1, completedJobs: -1 })
+    .limit(5);
+
+  res.json({
+    metrics: {
+      totalUsers,
+      activeJobs,
+      pendingReports: pendingReportsCount,
+      revenue: revenueAgg[0]?.revenue ?? 0,
+    },
+    pendingReports: pendingReports.map((report) => ({
+      _id: report.id,
+      reason: report.reason,
+      reasonLabel: report.reason,
+      description: report.description,
+      createdAt: report.createdAt,
+    })),
+    topProviders: topProviders.map(mapProviderSummary),
+  });
+});
+
+exports.getProviderEarnings = asyncHandler(async (req, res) => {
+  const providerId = req.user.id;
+
+  const metrics = {
+    totalEarnings: 0,
+    thisMonth: 0,
+    averageRating: req.user.rating || 0,
+    jobsCompleted: 0,
+  };
+
+  const completedJobs = await Job.find({
+    assignedProvider: providerId,
+    status: "completed",
+  })
+    .sort({ completedAt: -1, updatedAt: -1 })
+    .limit(50)
+    .populate({ path: "client", select: "name" });
+
+  metrics.jobsCompleted = completedJobs.length;
+  metrics.totalEarnings = completedJobs.reduce((sum, job) => sum + (job.budget || 0), 0);
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  metrics.thisMonth = completedJobs
+    .filter((job) => {
+      const date = job.updatedAt || job.createdAt;
+      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    })
+    .reduce((sum, job) => sum + (job.budget || 0), 0);
+
+  const months = Array.from({ length: 6 }).map((_, index) => {
+    const date = new Date(currentYear, currentMonth - (5 - index), 1);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    return { key, label: date.toLocaleString("en-US", { month: "short" }) };
+  });
+
+  const earningsByMonth = completedJobs.reduce((acc, job) => {
+    const date = job.updatedAt || job.createdAt;
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    acc[key] = (acc[key] || 0) + (job.budget || 0);
+    return acc;
+  }, {});
+
+  const chart = months.map((month) => ({
+    name: month.label,
+    earnings: earningsByMonth[month.key] || 0,
+  }));
+
+  const recentJobs = await Promise.all(
+    completedJobs.slice(0, 5).map(async (job) => {
+      const review = await Review.findOne({ job: job.id, provider: providerId });
+      return {
+        job: job.title,
+        client: job.client?.name,
+        date: job.updatedAt,
+        payment: job.budget,
+        rating: review?.rating,
+      };
+    })
+  );
+
+  res.json({
+    metrics,
+    chart,
+    recentJobs,
+  });
+});
+
+exports.getClientHistory = asyncHandler(async (req, res) => {
+  const jobs = await Job.find({ client: req.user.id })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .populate({ path: "assignedProvider", select: "name skills avatarUrl" });
+
+  const summary = {
+    totalJobs: jobs.length,
+    completed: jobs.filter((job) => job.status === "completed").length,
+    inProgress: jobs.filter((job) => job.status === "in-progress").length,
+    cancelled: jobs.filter((job) => job.status === "cancelled").length,
+  };
+
+  const jobIds = jobs.map((job) => job.id);
+  const reviews = await Review.find({
+    job: { $in: jobIds },
+    reviewerRole: "client",
+  });
+  const reviewByJob = reviews.reduce((acc, review) => {
+    acc[review.job.toString()] = review;
+    return acc;
+  }, {});
+
+  const history = jobs.map((job) => {
+    const review = reviewByJob[job.id];
+    return {
+      _id: job.id,
+      title: job.title,
+      budget: job.budget,
+      status: job.status,
+      datePosted: job.createdAt,
+      dateCompleted: job.status === "completed" ? job.updatedAt : null,
+      provider: job.assignedProvider
+        ? {
+            id: job.assignedProvider.id,
+            name: job.assignedProvider.name,
+            skill: job.assignedProvider.skills?.[0],
+            avatarUrl: job.assignedProvider.avatarUrl,
+          }
+        : null,
+      review: review
+        ? {
+            rating: review.rating,
+            comment: review.comment,
+            createdAt: review.createdAt,
+          }
+        : null,
+    };
+  });
+
+  const pendingReviewCount = history.filter(
+    (job) => job.status === "completed" && !job.review
+  ).length;
+
+  res.json({
+    summary,
+    pendingReviewCount,
+    jobs: history,
+  });
+});
