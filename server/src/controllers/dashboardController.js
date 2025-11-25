@@ -7,6 +7,8 @@ const Review = require("../models/Review");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 
+const MONTHS_TO_TRACK = 6;
+
 const mapProviderSummary = (provider) => ({
   _id: provider.id,
   name: provider.name,
@@ -20,6 +22,31 @@ const mapProviderSummary = (provider) => ({
   location: provider.location,
   avatarUrl: provider.avatarUrl,
 });
+
+const mapNotificationSummary = (notification) => ({
+  _id: notification.id,
+  title: notification.title,
+  body: notification.body,
+  type: notification.type,
+  timeStamp: notification.createdAt,
+  isRead: notification.isRead,
+});
+
+const buildMonthBuckets = () => {
+  const now = new Date();
+  return Array.from({ length: MONTHS_TO_TRACK }).map((_, index) => {
+    const date = new Date(
+      now.getFullYear(),
+      now.getMonth() - (MONTHS_TO_TRACK - 1 - index),
+      1
+    );
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1, // human readable month
+      label: date.toLocaleString("en-US", { month: "short" }),
+    };
+  });
+};
 
 exports.getClientDashboard = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ client: req.user.id })
@@ -48,10 +75,19 @@ exports.getClientDashboard = asyncHandler(async (req, res) => {
     .sort({ rating: -1, completedJobs: -1 })
     .limit(6);
 
+  const warnings = await Notification.find({
+    recipient: req.user.id,
+    type: "warning",
+    isRead: false,
+  })
+    .sort({ createdAt: -1 })
+    .limit(3);
+
   res.json({
     metrics,
     recommendedProviders: recommendedProviders.map(mapProviderSummary),
     activeJobs,
+    warnings: warnings.map(mapNotificationSummary),
   });
 });
 
@@ -87,6 +123,14 @@ exports.getProviderDashboard = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(4);
 
+  const warnings = await Notification.find({
+    recipient: providerId,
+    type: "warning",
+    isRead: false,
+  })
+    .sort({ createdAt: -1 })
+    .limit(3);
+
   res.json({
     welcomeMessage: `Hello ${req.user.name.split(" ")[0] || "there"}!`,
     subheading: "You have personalised job recommendations waiting.",
@@ -102,19 +146,32 @@ exports.getProviderDashboard = asyncHandler(async (req, res) => {
       status: job.status,
       clientName: job.client?.name,
     })),
-    recentNotifications: recentNotifications.map((notification) => ({
-      _id: notification.id,
-      title: notification.title,
-      body: notification.body,
-      type: notification.type,
-      timeStamp: notification.createdAt,
-      isRead: notification.isRead,
-    })),
+    recentNotifications: recentNotifications.map(mapNotificationSummary),
+    warnings: warnings.map(mapNotificationSummary),
   });
 });
 
 exports.getAdminDashboard = asyncHandler(async (_req, res) => {
-  const [totalUsers, activeJobs, pendingReportsCount, revenueAgg] = await Promise.all([
+  const monthBuckets = buildMonthBuckets();
+  const firstBucket = monthBuckets[0];
+  const sixMonthsAgo = new Date(firstBucket.year, firstBucket.month - 1, 1);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const [
+    totalUsers,
+    activeJobs,
+    pendingReportsCount,
+    revenueAgg,
+    jobStatusAgg,
+    roleDistributionAgg,
+    userGrowthAgg,
+    reportVolumeAgg,
+    resolutionAgg,
+    warningsLast30Days,
+    suspensionCount,
+    banCount,
+  ] = await Promise.all([
     User.countDocuments(),
     Job.countDocuments({ status: { $in: ["open", "in-progress"] } }),
     Report.countDocuments({ status: "pending" }),
@@ -122,6 +179,54 @@ exports.getAdminDashboard = asyncHandler(async (_req, res) => {
       { $match: { status: "completed" } },
       { $group: { _id: null, revenue: { $sum: "$budget" } } },
     ]),
+    Job.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+    User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }]),
+    User.aggregate([
+      { $match: { createdAt: { $gte: sixMonthsAgo } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Report.aggregate([
+      { $match: { createdAt: { $gte: sixMonthsAgo } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Report.aggregate([
+      {
+        $match: {
+          status: { $in: ["resolved", "rejected"] },
+          updatedAt: { $ne: null },
+        },
+      },
+      {
+        $project: {
+          avgHours: {
+            $divide: [{ $subtract: ["$updatedAt", "$createdAt"] }, 1000 * 60 * 60],
+          },
+        },
+      },
+      { $group: { _id: null, avgHours: { $avg: "$avgHours" } } },
+    ]),
+    Notification.countDocuments({
+      type: "warning",
+      createdAt: { $gte: thirtyDaysAgo },
+    }),
+    Report.countDocuments({ actionTaken: "suspend" }),
+    Report.countDocuments({ actionTaken: "ban" }),
   ]);
 
   const pendingReports = await Report.find({ status: "pending" })
@@ -132,12 +237,70 @@ exports.getAdminDashboard = asyncHandler(async (_req, res) => {
     .sort({ rating: -1, completedJobs: -1 })
     .limit(5);
 
+  const mapByKey = (aggregates) =>
+    aggregates.reduce((acc, item) => {
+      const key = `${item._id.year}-${item._id.month}`;
+      acc[key] = item.count;
+      return acc;
+    }, {});
+
+  const userGrowthMap = mapByKey(userGrowthAgg);
+  const reportVolumeMap = mapByKey(reportVolumeAgg);
+
+  const userGrowth = monthBuckets.map((bucket) => ({
+    name: bucket.label,
+    value: userGrowthMap[`${bucket.year}-${bucket.month}`] ?? 0,
+  }));
+
+  const reportVolume = monthBuckets.map((bucket) => ({
+    name: bucket.label,
+    value: reportVolumeMap[`${bucket.year}-${bucket.month}`] ?? 0,
+  }));
+
+  const jobStatusMap = jobStatusAgg.reduce((acc, item) => {
+    acc[item._id] = item.count;
+    return acc;
+  }, {});
+
+  const jobStatusOrder = ["open", "in-progress", "completed", "cancelled"];
+  const jobStatus = jobStatusOrder.map((status) => ({
+    name: status,
+    value: jobStatusMap[status] ?? 0,
+  }));
+
+  const roleDistributionMap = roleDistributionAgg.reduce((acc, item) => {
+    acc[item._id] = item.count;
+    return acc;
+  }, {});
+
+  const roles = ["client", "provider", "admin"];
+  const roleDistribution = roles.map((role) => ({
+    name: role,
+    value: roleDistributionMap[role] ?? 0,
+  }));
+
+  const avgResolutionHours = Number(
+    (resolutionAgg[0]?.avgHours ?? 0).toFixed(1)
+  );
+
   res.json({
     metrics: {
       totalUsers,
       activeJobs,
       pendingReports: pendingReportsCount,
       revenue: revenueAgg[0]?.revenue ?? 0,
+    },
+    insights: {
+      avgResolutionHours,
+      warningsLast30Days,
+      suspensions: suspensionCount,
+      bans: banCount,
+    },
+    charts: {
+      userGrowth,
+      jobStatus,
+      roleDistribution,
+      reportVolume,
     },
     pendingReports: pendingReports.map((report) => ({
       _id: report.id,

@@ -11,6 +11,9 @@ const statusFilters = [
 
 function AdminReports() {
   const [status, setStatus] = useState("pending");
+  const [pendingActionId, setPendingActionId] = useState(null);
+  const [warningModalReport, setWarningModalReport] = useState(null);
+  const [warningMessage, setWarningMessage] = useState("");
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -29,8 +32,23 @@ function AdminReports() {
     },
   });
 
-  const handleAction = async (reportId, nextStatus) => {
-    await mutateAsync({ reportId, status: nextStatus });
+  const handleAction = async (reportId, nextStatus, extra = {}) => {
+    setPendingActionId(reportId);
+    try {
+      await mutateAsync({ reportId, status: nextStatus, ...extra });
+      setWarningModalReport(null);
+      setWarningMessage("");
+    } finally {
+      setPendingActionId(null);
+    }
+  };
+
+  const handleWarningSubmit = async () => {
+    if (!warningModalReport || !warningMessage.trim()) return;
+    await handleAction(warningModalReport._id, "resolved", {
+      actionTaken: "warning",
+      warningMessage: warningMessage.trim(),
+    });
   };
 
   return (
@@ -114,10 +132,10 @@ function AdminReports() {
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        {report.reported?.name ?? "Unknown"}
+                        {report.reportedUser?.name ?? "Unknown"}
                       </span>
                       <span className="text-xs text-gray-400">
-                        {report.reported?.email}
+                        {report.reportedUser?.email}
                       </span>
                     </div>
                   </td>
@@ -143,22 +161,41 @@ function AdminReports() {
                     {new Date(report.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <button
-                        onClick={() => handleAction(report._id, "resolved")}
-                        disabled={isPending}
-                        className="px-3 py-1 rounded-lg text-sm font-semibold border border-green-500 text-green-600 hover:bg-green-50 disabled:opacity-60"
+                    {report.status === "pending" ? (
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          onClick={() => handleAction(report._id, "resolved")}
+                          disabled={isPending || pendingActionId === report._id}
+                          className="px-3 py-1 rounded-lg text-sm font-semibold border border-green-500 text-green-600 hover:bg-green-50 disabled:opacity-60"
+                        >
+                          Resolve
+                        </button>
+                        <button
+                          onClick={() => handleAction(report._id, "rejected")}
+                          disabled={isPending || pendingActionId === report._id}
+                          className="px-3 py-1 rounded-lg text-sm font-semibold border border-red-500 text-red-500 hover:bg-red-50 disabled:opacity-60"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => setWarningModalReport(report)}
+                          disabled={isPending || pendingActionId === report._id}
+                          className="px-3 py-1 rounded-lg text-sm font-semibold border border-orange-400 text-orange-500 hover:bg-orange-50 disabled:opacity-60"
+                        >
+                          Warn
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
+                          report.status === "resolved"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
                       >
-                        Resolve
-                      </button>
-                      <button
-                        onClick={() => handleAction(report._id, "rejected")}
-                        disabled={isPending}
-                        className="px-3 py-1 rounded-lg text-sm font-semibold border border-red-500 text-red-500 hover:bg-red-50 disabled:opacity-60"
-                      >
-                        Reject
-                      </button>
-                    </div>
+                        {report.status}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))
@@ -166,6 +203,47 @@ function AdminReports() {
           </tbody>
         </table>
       </div>
+      {warningModalReport ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Send warning to{" "}
+                {warningModalReport.reportedUser?.name ?? "this user"}
+              </h2>
+              <p className="text-sm text-gray-500">
+                This message will appear on the user&apos;s dashboard and via
+                notifications.
+              </p>
+            </div>
+            <textarea
+              value={warningMessage}
+              onChange={(event) => setWarningMessage(event.target.value)}
+              rows={4}
+              className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              placeholder="Explain the policy violation and next steps..."
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setWarningModalReport(null);
+                  setWarningMessage("");
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleWarningSubmit}
+                disabled={!warningMessage.trim() || isPending}
+                className="px-4 py-2 rounded-lg bg-orange-500 text-white font-semibold hover:bg-orange-600 disabled:opacity-60"
+              >
+                Send warning
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

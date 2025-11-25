@@ -68,7 +68,7 @@ exports.getReports = asyncHandler(async (req, res) => {
 
 exports.updateReport = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, actionTaken } = req.body;
+  const { status, actionTaken, warningMessage } = req.body;
   const io = req.app.get("socket");
 
   if (!status || !["pending", "resolved", "rejected"].includes(status)) {
@@ -84,6 +84,12 @@ exports.updateReport = asyncHandler(async (req, res) => {
     throw createError(403, "Only admins can update reports");
   }
 
+  const trimmedWarning = typeof warningMessage === "string" ? warningMessage.trim() : "";
+
+  if (actionTaken === "warning" && !trimmedWarning) {
+    throw createError(400, "Warning message is required");
+  }
+
   report.status = status;
   report.actionTaken = actionTaken ?? null;
   report.reviewedBy = req.user.id;
@@ -97,7 +103,7 @@ exports.updateReport = asyncHandler(async (req, res) => {
     });
   }
 
-  await notifyUser({
+  const reporterNotification = notifyUser({
     recipient: report.reporter,
     title: "Report update",
     body: `Your report against user ${report.reportedUser.toString()} is now ${status}`,
@@ -105,6 +111,19 @@ exports.updateReport = asyncHandler(async (req, res) => {
     metadata: { reportId: report.id },
     io,
   });
+
+  if (actionTaken === "warning") {
+    await notifyUser({
+      recipient: report.reportedUser,
+      title: "Account Warning",
+      body: trimmedWarning,
+      type: "warning",
+      metadata: { reportId: report.id },
+      io,
+    });
+  }
+
+  await reporterNotification;
 
   res.json({ report });
 });

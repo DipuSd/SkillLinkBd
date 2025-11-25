@@ -24,6 +24,6 @@ dist-ssr
 *.sw?
 
 # text files
-SRS.md
-.env
-MONGODB_SCHEMA.md
+# SRS.md
+# .env
+# MONGODB_SCHEMA.md

@@ -3,6 +3,7 @@ import { FaInfo } from "react-icons/fa";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
 import { ImCross } from "react-icons/im";
+import { MdOutlineWarningAmber } from "react-icons/md";
 
 const iconMap = {
   accept: {
@@ -16,6 +17,10 @@ const iconMap = {
   reject: {
     className: "bg-red-400",
     icon: <ImCross size={20} />,
+  },
+  warning: {
+    className: "bg-orange-400",
+    icon: <MdOutlineWarningAmber size={20} />,
   },
 };
 

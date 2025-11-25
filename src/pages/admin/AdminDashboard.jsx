@@ -38,6 +38,27 @@ function AdminDashboard() {
       ]
     : defaultMetrics;
 
+  const insightCards = [
+    {
+      label: "Avg. Resolution (hrs)",
+      value: data?.insights?.avgResolutionHours
+        ? data.insights.avgResolutionHours
+        : "—",
+    },
+    {
+      label: "Warnings (30d)",
+      value: data?.insights?.warningsLast30Days ?? 0,
+    },
+    {
+      label: "Suspensions",
+      value: data?.insights?.suspensions ?? 0,
+    },
+    {
+      label: "Bans",
+      value: data?.insights?.bans ?? 0,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <header>
@@ -49,6 +70,26 @@ function AdminDashboard() {
 
       <section>
         <DashboardMetricsCard items={metrics} loading={isLoading} />
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {insightCards.map((card) => (
+          <div
+            key={card.label}
+            className="rounded-2xl border border-gray-200 bg-white px-4 py-5 shadow-sm"
+          >
+            <p className="text-xs uppercase tracking-wide text-gray-500">
+              {card.label}
+            </p>
+            <p className="text-2xl font-semibold text-gray-800 mt-2">
+              {isLoading ? (
+                <span className="inline-block h-6 w-16 bg-gray-100 rounded animate-pulse" />
+              ) : (
+                card.value
+              )}
+            </p>
+          </div>
+        ))}
       </section>
 
       <section className="grid lg:grid-cols-2 gap-6">

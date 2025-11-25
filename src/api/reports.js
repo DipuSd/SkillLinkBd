@@ -10,10 +10,16 @@ export const getReports = async (params = {}) => {
   return data;
 };
 
-export const updateReportStatus = async ({ reportId, status, actionTaken }) => {
+export const updateReportStatus = async ({
+  reportId,
+  status,
+  actionTaken,
+  warningMessage,
+}) => {
   const { data } = await httpClient.patch(`/api/reports/${reportId}`, {
     status,
     actionTaken,
+    warningMessage,
   });
   return data;
 };

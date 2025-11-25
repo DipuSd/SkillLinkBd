@@ -3,7 +3,6 @@ import { FiPlusCircle } from "react-icons/fi";
 import { IoPeopleOutline } from "react-icons/io5";
 import { IoChatbubbleOutline } from "react-icons/io5";
 import { MdOutlineHistory } from "react-icons/md";
-import { FaRegFlag } from "react-icons/fa";
 import DashboardLayout from "./DashboardLayout";
 
 const clientMenu = [
@@ -42,12 +41,6 @@ const clientMenu = [
     icon: <MdOutlineHistory />,
     to: "/client/history",
     match: ["/client/history"],
-  },
-  {
-    label: "Reports",
-    icon: <FaRegFlag />,
-    to: "/client/reports",
-    match: ["/client/reports"],
   },
 ];
 

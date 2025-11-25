@@ -4,6 +4,7 @@ const typeColours = {
   accept: "bg-green-400",
   info: "bg-blue-400",
   reject: "bg-red-400",
+  warning: "bg-orange-400",
 };
 
 export default function ProviderRecentNotification({ items = [] }) {

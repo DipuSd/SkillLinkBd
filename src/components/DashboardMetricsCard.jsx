@@ -16,10 +16,10 @@ function DashboardMetricsCard({ items = [], loading = false }) {
               className="flex flex-row items-center justify-between hover:shadow-lg rounded-xl border border-gray-200 py-4 px-6 border-t-4 border-t-blue-400 bg-white transition-all duration-200"
             >
               <div>
-                <h2 className="text-gray-400 text-sm uppercase tracking-wide">
+                <h2 className="text-gray-400 text-base uppercase tracking-wide">
                   {item.label}
                 </h2>
-                <p className="text-3xl font-bold text-gray-800">
+                <p className="text-4xl font-bold text-gray-800">
                   {item.count ?? 0}
                 </p>
               </div>

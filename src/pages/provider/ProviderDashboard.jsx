@@ -14,6 +14,8 @@ import { getProviderDashboard } from "../../api/dashboard";
 import { getRecommendedJobs } from "../../api/jobs";
 import { applyToJob } from "../../api/applications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import WarningBanner from "../../components/WarningBanner";
+import { markNotificationRead } from "../../api/notifications";
 
 export default function ProviderDashboard() {
   const navigate = useNavigate();
@@ -43,6 +45,19 @@ export default function ProviderDashboard() {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
+
+  const dismissWarningMutation = useMutation({
+    mutationFn: (notificationId) => markNotificationRead(notificationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["provider-dashboard"] });
+    },
+  });
+
+  const handleDismissWarning = (warning) => {
+    const notificationId = warning?._id ?? warning?.id;
+    if (!notificationId) return;
+    dismissWarningMutation.mutate(notificationId);
+  };
 
   const dashMetrics = [
     {
@@ -75,24 +90,30 @@ export default function ProviderDashboard() {
     <>
       <div className="py-2 overflow-y-auto md:px-6 lg:px-20 mt-2 space-y-5">
         {/* welcome banner */}
-        <div className="w-full bg-gradient-to-r from-blue-500 to-teal-500 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between px-5 py-12 gap-4">
-          <div className="text-white space-y-1">
-            <h2 className="text-2xl font-semibold">
+        <div className="w-full bg-gradient-to-r from-blue-500 to-teal-500 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between px-5 py-12 gap-4">
+          <div className="text-white space-y-2">
+            <h2 className="text-3xl font-semibold">
               {data?.welcomeMessage ?? "Welcome back!"}
             </h2>
-            <p className="font-semibold text-lg md:text-xl">
+            <p className="font-semibold text-xl md:text-2xl">
               {data?.subheading ??
                 "You have new job recommendations based on your skills."}
             </p>
           </div>
           <button
             onClick={() => navigate("/provider/jobs")}
-            className="flex items-center gap-2 text-blue-500 bg-white rounded-lg px-4 py-2 cursor-pointer hover:opacity-90 font-semibold"
+            className="flex items-center gap-3 text-blue-500 bg-white rounded-xl px-5 py-3 cursor-pointer hover:opacity-90 font-semibold text-lg"
           >
             <span>Browse Jobs</span>
             <FaArrowRight size={16} />
           </button>
         </div>
+        {/* warnings */}
+        <WarningBanner
+          warnings={data?.warnings}
+          dismissible
+          onDismiss={handleDismissWarning}
+        />
         {/* dashboard metrics section */}
         <div>
           <DashboardMetricsCard items={dashMetrics} loading={isLoading} />

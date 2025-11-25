@@ -6,22 +6,38 @@ import { LuDollarSign } from "react-icons/lu";
 import { BsStars } from "react-icons/bs";
 import { FaArrowRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardMetricsCard from "../../components/DashboardMetricsCard";
 import ProviderCards from "../../components/ProviderCards";
 import ActivejobsCard from "../../components/ActiveJobsCard";
 import { getClientDashboard } from "../../api/dashboard";
 import { useAuth } from "../../context/AuthContext";
+import WarningBanner from "../../components/WarningBanner";
+import { markNotificationRead } from "../../api/notifications";
 
 function ClientDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["client-dashboard"],
     queryFn: getClientDashboard,
     staleTime: 30_000,
   });
+
+  const dismissWarningMutation = useMutation({
+    mutationFn: (notificationId) => markNotificationRead(notificationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
+    },
+  });
+
+  const handleDismissWarning = (warning) => {
+    const notificationId = warning?._id ?? warning?.id;
+    if (!notificationId) return;
+    dismissWarningMutation.mutate(notificationId);
+  };
 
   const metrics = [
     {
@@ -53,23 +69,29 @@ function ClientDashboard() {
     <>
       <div className="py-2 overflow-y-auto md:px-6 lg:px-20 mt-2 space-y-5">
         {/* welcome banner section and post button */}
-        <div className="w-full bg-gradient-to-r from-blue-500 to-teal-500 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between px-5 py-12 gap-4">
-          <div className="text-white space-y-1">
-            <h2 className="text-xl md:text-2xl font-semibold">
+        <div className="w-full bg-gradient-to-r from-blue-500 to-teal-500 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between px-5 py-12 gap-4">
+          <div className="text-white space-y-2">
+            <h2 className="text-3xl font-semibold">
               Welcome, {user?.name ?? "Client"}
             </h2>
-            <p className="font-semibold text-lg md:text-xl">
+            <p className="font-semibold text-xl md:text-2xl">
               Ready to find the perfect worker for your next project?
             </p>
           </div>
           <button
             onClick={() => navigate("/client/jobs/new")}
-            className="flex flex-row items-center justify-center gap-2 text-blue-500 bg-white rounded-lg px-4 py-2 cursor-pointer hover:opacity-90 font-semibold"
+            className="flex flex-row items-center justify-center gap-2 text-blue-500 bg-white rounded-xl px-5 py-3 cursor-pointer hover:opacity-90 font-semibold text-lg"
           >
             <FiPlusCircle size={18} />
             <span>Post a job</span>
           </button>
         </div>
+        {/* warnings */}
+        <WarningBanner
+          warnings={data?.warnings}
+          dismissible
+          onDismiss={handleDismissWarning}
+        />
         {/* statistics and metrics section section */}
         <DashboardMetricsCard items={metrics} loading={isLoading} />
         {/* Recommendations */}

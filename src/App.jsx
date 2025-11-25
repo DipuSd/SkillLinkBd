@@ -7,7 +7,6 @@ import ClientPostJob from "./pages/Client/ClientPostJob";
 import ClientApplicant from "./pages/Client/ClientApplicant";
 import ClientChat from "./pages/Client/ClientChat";
 import ClientHistory from "./pages/Client/ClientHistory";
-import ClientReports from "./pages/Client/ClientReports";
 import ViewProviderProfile from "./pages/Client/ViewProviderProfile";
 import ClientBrowseProviders from "./pages/Client/ClientBrowseProviders";
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
@@ -21,8 +20,7 @@ import NotificationCenter from "./pages/NotificationCenter";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminReports from "./pages/admin/AdminReports";
-import AdminJobs from "./pages/admin/AdminJobs";
-import AdminMessages from "./pages/admin/AdminMessages";
+import AdminInsights from "./pages/admin/AdminInsights";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import ClientLayout from "./layouts/ClientLayout";
 import ProviderLayout from "./layouts/ProviderLayout";
@@ -52,7 +50,6 @@ function App() {
               path="notifications"
               element={<NotificationCenter scope="client" />}
             />
-            <Route path="reports" element={<ClientReports />} />
           </Route>
         </Route>
 
@@ -80,10 +77,9 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="insights" element={<AdminInsights />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="reports" element={<AdminReports />} />
-            <Route path="jobs" element={<AdminJobs />} />
-            <Route path="messages" element={<AdminMessages />} />
             <Route
               path="notifications"
               element={<AdminNotifications />}

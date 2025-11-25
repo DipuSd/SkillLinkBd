@@ -18,7 +18,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["info", "accept", "reject"],
+      enum: ["info", "accept", "reject", "warning"],
       default: "info",
     },
     link: {
