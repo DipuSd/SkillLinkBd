@@ -5,6 +5,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const editableFields = [
   "name",
   "location",
+  "coordinates",
   "skills",
   "hourlyRate",
   "experienceYears",
@@ -112,11 +113,24 @@ exports.updateUserStatus = asyncHandler(async (req, res) => {
   res.json({ user: user.toJSON() });
 });
 
+// Calculate distance between two coordinates using Haversine formula (in km)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
 exports.searchProviders = asyncHandler(async (req, res) => {
   const {
     search,
     skill,
-    location,
+    // location, // Removed location text search
     minRating,
     maxHourlyRate,
     minExperience,
@@ -140,9 +154,10 @@ exports.searchProviders = asyncHandler(async (req, res) => {
     filters.skills = { $in: skills.filter(Boolean) };
   }
 
-  if (location) {
-    filters.location = new RegExp(location, "i");
-  }
+  // Location filtering handled via coordinates now
+  // if (location) {
+  //   filters.location = new RegExp(location, "i");
+  // }
 
   if (minRating) {
     filters.rating = { ...(filters.rating || {}), $gte: Number(minRating) };
@@ -172,7 +187,36 @@ exports.searchProviders = asyncHandler(async (req, res) => {
     sortOrder = { experienceYears: -1, rating: -1 };
   }
 
-  const providers = await User.find(filters).sort(sortOrder).limit(200);
+  let providers = await User.find(filters).sort(sortOrder).limit(200);
+
+  // Filter by 20km radius if requester has coordinates
+  if (req.user && req.user.coordinates?.latitude && req.user.coordinates?.longitude) {
+    const clientLat = req.user.coordinates.latitude;
+    const clientLon = req.user.coordinates.longitude;
+
+    providers = providers.filter(provider => {
+      if (!provider.coordinates?.latitude || !provider.coordinates?.longitude) {
+        return false; 
+      }
+      const distance = calculateDistance(
+        clientLat,
+        clientLon,
+        provider.coordinates.latitude,
+        provider.coordinates.longitude
+      );
+      return distance <= 20;
+    });
+  }
 
   res.json({ providers: providers.map(formatProviderSummary) });
+});
+
+exports.deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    throw createError(404, "User not found");
+  }
+
+  await User.findByIdAndDelete(req.params.id);
+  res.status(204).send();
 });

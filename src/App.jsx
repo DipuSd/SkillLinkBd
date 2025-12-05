@@ -9,6 +9,7 @@ import ClientChat from "./pages/Client/ClientChat";
 import ClientHistory from "./pages/Client/ClientHistory";
 import ViewProviderProfile from "./pages/Client/ViewProviderProfile";
 import ClientBrowseProviders from "./pages/Client/ClientBrowseProviders";
+import ClientProfile from "./pages/Client/ClientProfile";
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderJobs from "./pages/provider/ProviderJobs";
 import ProviderApplications from "./pages/provider/ProviderApplications";
@@ -45,6 +46,7 @@ function App() {
             <Route path="providers" element={<ClientBrowseProviders />} />
             <Route path="provider/:providerId" element={<ViewProviderProfile />} />
             <Route path="chat" element={<ClientChat />} />
+            <Route path="profile" element={<ClientProfile />} />
             <Route path="history" element={<ClientHistory />} />
             <Route
               path="notifications"

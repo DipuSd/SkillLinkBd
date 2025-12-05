@@ -17,3 +17,8 @@ export const updateDirectJobStatus = async ({ directJobId, action }) => {
   return data;
 };
 
+export const payForDirectJob = async ({ directJobId, amount }) => {
+  const { data } = await httpClient.post(`/api/direct-jobs/${directJobId}/pay`, { amount });
+  return data;
+};
+

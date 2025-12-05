@@ -7,7 +7,9 @@ import {
   createDirectJob,
   getDirectJobs,
   updateDirectJobStatus,
+  payForDirectJob,
 } from "../../api/directJobs";
+import PaymentModal from "../../components/PaymentModal";
 
 const skillOptions = [
   { value: "", label: "All occupations" },
@@ -42,6 +44,7 @@ export default function ClientBrowseProviders() {
   });
   const [inviteTarget, setInviteTarget] = useState(null);
   const [inviteForm, setInviteForm] = useState(inviteInitialState);
+  const [paymentJob, setPaymentJob] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -57,13 +60,11 @@ export default function ClientBrowseProviders() {
         minExperience: filters.minExperience || undefined,
         sort: filters.sort,
       }),
-    staleTime: 30_000,
   });
 
   const directJobsQuery = useQuery({
     queryKey: ["direct-jobs", "client"],
     queryFn: () => getDirectJobs({ scope: "client" }),
-    staleTime: 15_000,
   });
 
   const inviteMutation = useMutation({
@@ -79,6 +80,18 @@ export default function ClientBrowseProviders() {
     mutationFn: updateDirectJobStatus,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["direct-jobs", "client"] });
+    },
+  });
+
+  const payMutation = useMutation({
+    mutationFn: payForDirectJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["direct-jobs", "client"] });
+      setPaymentJob(null);
+      alert("Payment successful! Thank you.");
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || "Payment failed.");
     },
   });
 
@@ -162,19 +175,6 @@ export default function ClientBrowseProviders() {
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-gray-600">
-              Location
-            </label>
-            <input
-              type="text"
-              name="location"
-              value={filters.location}
-              onChange={handleFilterChange}
-              placeholder="e.g., Dhanmondi"
-              className="mt-1 w-full rounded-lg bg-gray-100 px-3 py-2 outline-none focus:border focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
-            />
           </div>
         </div>
 
@@ -320,6 +320,7 @@ export default function ClientBrowseProviders() {
                     action: "cancel",
                   })
                 }
+                onPay={() => setPaymentJob(job)}
                 isCancelling={cancelMutation.isPending}
                 showCancel
               />
@@ -331,7 +332,11 @@ export default function ClientBrowseProviders() {
           <div className="space-y-2">
             <h3 className="text-md font-semibold text-gray-700">History</h3>
             {historyInvites.map((job) => (
-              <DirectJobCard key={job._id} job={job} />
+              <DirectJobCard 
+                key={job._id} 
+                job={job} 
+                onPay={() => setPaymentJob(job)}
+              />
             ))}
           </div>
         ) : null}
@@ -351,11 +356,19 @@ export default function ClientBrowseProviders() {
           error={inviteMutation.error?.response?.data?.message}
         />
       ) : null}
+
+      <PaymentModal
+        isOpen={Boolean(paymentJob)}
+        onClose={() => setPaymentJob(null)}
+        job={paymentJob}
+        onPay={(job) => payMutation.mutate({ directJobId: job.id || job._id, amount: job.budget })}
+        isProcessing={payMutation.isPending}
+      />
     </div>
   );
 }
 
-function DirectJobCard({ job, onMessage, onCancel, showCancel, isCancelling }) {
+function DirectJobCard({ job, onMessage, onCancel, onPay, showCancel, isCancelling }) {
   return (
     <div className="p-4 rounded-2xl border border-gray-200 bg-white flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -365,19 +378,30 @@ function DirectJobCard({ job, onMessage, onCancel, showCancel, isCancelling }) {
           </p>
           <h4 className="text-lg font-semibold text-gray-900">{job.title}</h4>
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-            job.status === "completed"
-              ? "bg-green-100 text-green-700"
-              : job.status === "in-progress"
-              ? "bg-blue-100 text-blue-700"
-              : job.status === "requested"
-              ? "bg-orange-100 text-orange-700"
-              : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          {job.status.replace("-", " ")}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+              job.status === "completed"
+                ? "bg-green-100 text-green-700"
+                : job.status === "in-progress"
+                ? "bg-blue-100 text-blue-700"
+                : job.status === "requested"
+                ? "bg-orange-100 text-orange-700"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {job.status.replace("-", " ")}
+          </span>
+          {job.status === "completed" && job.paymentStatus !== "paid" ? (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-600 border border-orange-200">
+              Unpaid
+            </span>
+          ) : job.status === "completed" && job.paymentStatus === "paid" ? (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-600 border border-green-200">
+              Paid
+            </span>
+          ) : null}
+        </div>
       </div>
       <p className="text-sm text-gray-500 line-clamp-3">{job.description}</p>
       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
@@ -401,6 +425,15 @@ function DirectJobCard({ job, onMessage, onCancel, showCancel, isCancelling }) {
             className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-green-500 hover:text-white transition-colors"
           >
             Message
+          </button>
+        ) : null}
+        {job.status === "completed" && job.paymentStatus !== "paid" && onPay ? (
+          <button
+            type="button"
+            onClick={onPay}
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:opacity-90 transition-opacity"
+          >
+            Pay Now
           </button>
         ) : null}
         {showCancel ? (

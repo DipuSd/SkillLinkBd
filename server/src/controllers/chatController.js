@@ -142,3 +142,21 @@ exports.startConversation = asyncHandler(async (req, res) => {
 
   res.status(201).json({ conversation });
 });
+
+exports.deleteConversation = asyncHandler(async (req, res) => {
+  const { conversationId } = req.params;
+
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) {
+    throw createError(404, "Conversation not found");
+  }
+
+  if (!conversation.participants.some((id) => id.toString() === req.user.id)) {
+    throw createError(403, "You are not part of this conversation");
+  }
+
+  await Message.deleteMany({ conversation: conversationId });
+  await Conversation.findByIdAndDelete(conversationId);
+
+  res.json({ message: "Conversation deleted successfully" });
+});

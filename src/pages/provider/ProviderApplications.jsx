@@ -43,7 +43,6 @@ export default function ProviderApplications() {
         scope: "provider",
         status: statusFilter === "all" ? undefined : statusFilter,
       }),
-    staleTime: 30_000,
   });
 
   const updateStatusMutation = useMutation({
@@ -102,6 +101,7 @@ export default function ProviderApplications() {
           jobId: job._id || job.id,
           clientId,
           jobStatus,
+          paymentStatus: job.paymentStatus,
           canRateClient:
             jobStatus === "completed" &&
             !application.providerReviewSubmitted,
@@ -233,6 +233,7 @@ export default function ProviderApplications() {
               jobId: reportTarget.jobId,
             });
             setReportTarget(null);
+            alert("Report submitted successfully.");
           } catch (error) {
             // handled via modal
           }

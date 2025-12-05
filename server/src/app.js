@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const morgan = require("morgan");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -48,6 +49,9 @@ app.use("/api", notificationRoutes);
 app.use("/api", reportRoutes);
 app.use("/api", reviewRoutes);
 app.use("/api", directJobRoutes);
+app.use("/api", require("./routes/uploadRoutes"));
+
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use((req, res) => {
   res.status(404).json({ message: "Not found" });

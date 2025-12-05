@@ -48,6 +48,19 @@ const directJobSchema = new mongoose.Schema(
     completedAt: {
       type: Date,
     },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid"],
+      default: "pending",
+      index: true,
+    },
+    paymentDate: {
+      type: Date,
+    },
+    paymentAmount: {
+      type: Number,
+      min: 0,
+    },
   },
   {
     timestamps: true,

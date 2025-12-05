@@ -52,6 +52,18 @@ const jobSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Application",
     },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid"],
+      default: "pending",
+      index: true,
+    },
+    paymentDate: {
+      type: Date,
+    },
+    paymentAmount: {
+      type: Number,
+    },
   },
   {
     timestamps: true,

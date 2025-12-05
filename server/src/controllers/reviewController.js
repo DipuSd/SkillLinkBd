@@ -33,8 +33,10 @@ exports.createReview = asyncHandler(async (req, res) => {
     throw createError(403, "You cannot review this job");
   }
 
-  if (isProviderReviewer && job.assignedProvider.toString() !== req.user.id) {
-    throw createError(403, "You cannot review this job");
+  const assignedProviderId = job.assignedProvider?._id?.toString() || job.assignedProvider?.toString();
+
+  if (isProviderReviewer && assignedProviderId !== req.user.id) {
+    throw createError(403, "You can only review jobs you were assigned to");
   }
 
   const existing = await Review.findOne({ job: jobId, reviewerRole });

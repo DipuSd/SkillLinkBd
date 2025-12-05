@@ -10,6 +10,7 @@ const {
   updateJobStatus,
   assignJobProvider,
   getRecommendedJobs,
+  processPayment,
 } = require("../controllers/jobController");
 const { authenticate, authorizeRoles } = require("../middleware/auth");
 const validateRequest = require("../middleware/validateRequest");
@@ -63,6 +64,14 @@ router.patch(
   [body("providerId").notEmpty()],
   validateRequest,
   assignJobProvider
+);
+
+router.post(
+  "/jobs/:id/pay",
+  authorizeRoles("client", "admin"),
+  [body("amount").optional().isNumeric()],
+  validateRequest,
+  processPayment
 );
 
 module.exports = router;

@@ -18,6 +18,7 @@ function ApplicantCards({
   onViewProfile,
   onMessage,
   onHire,
+  onReject,
   isHiring = false,
 }) {
   if (!applicants.length) {
@@ -134,14 +135,23 @@ function ApplicantCards({
                 </button>
               ) : null}
               {(status === "pending" || status === "applied") && job.status === "open" ? (
-                <button
-                  onClick={() => onHire?.(application)}
-                  disabled={isHiring}
-                  className="flex-1 px-3 py-2 rounded-xl bg-blue-500 text-white cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 transition-all duration-200 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <BsPersonCheck size={16} />
-                  <span>{isHiring ? "Hiring..." : "Hire"}</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => onHire?.(application)}
+                    disabled={isHiring}
+                    className="flex-1 px-3 py-2 rounded-xl bg-blue-500 text-white cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 transition-all duration-200 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <BsPersonCheck size={16} />
+                    <span>{isHiring ? "Hiring..." : "Hire"}</span>
+                  </button>
+                  <button
+                    onClick={() => onReject?.(application)}
+                    disabled={isHiring}
+                    className="flex-1 px-3 py-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-500 hover:text-white cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>Reject</span>
+                  </button>
+                </>
               ) : null}
             </div>
           </div>

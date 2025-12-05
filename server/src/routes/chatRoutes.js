@@ -5,6 +5,7 @@ const {
   startConversation,
   getMessages,
   sendMessage,
+  deleteConversation,
 } = require("../controllers/chatController");
 const { authenticate } = require("../middleware/auth");
 const validateRequest = require("../middleware/validateRequest");
@@ -30,5 +31,7 @@ router.post(
   validateRequest,
   sendMessage
 );
+
+router.delete("/chat/conversations/:conversationId", deleteConversation);
 
 module.exports = router;

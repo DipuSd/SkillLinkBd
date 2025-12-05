@@ -31,6 +31,18 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    coordinates: {
+      latitude: {
+        type: Number,
+        min: -90,
+        max: 90,
+      },
+      longitude: {
+        type: Number,
+        min: -180,
+        max: 180,
+      },
+    },
     skills: {
       type: [String],
       default: [],
@@ -69,9 +81,17 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    totalEarnings: {
+      type: Number,
+      default: 0,
+    },
+    totalSpent: {
+      type: Number,
+      default: 0,
+    },
     status: {
       type: String,
-      enum: ["active", "suspended", "banned"],
+      enum: ["active", "banned"],
       default: "active",
     },
     isBanned: {

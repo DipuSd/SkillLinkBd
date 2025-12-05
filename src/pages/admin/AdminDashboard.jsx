@@ -40,18 +40,8 @@ function AdminDashboard() {
 
   const insightCards = [
     {
-      label: "Avg. Resolution (hrs)",
-      value: data?.insights?.avgResolutionHours
-        ? data.insights.avgResolutionHours
-        : "—",
-    },
-    {
       label: "Warnings (30d)",
       value: data?.insights?.warningsLast30Days ?? 0,
-    },
-    {
-      label: "Suspensions",
-      value: data?.insights?.suspensions ?? 0,
     },
     {
       label: "Bans",

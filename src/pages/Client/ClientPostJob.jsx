@@ -68,8 +68,7 @@ function ClientPostJob() {
       !formData.jobTitle ||
       !formData.description ||
       !formData.skillNeeded ||
-      !formData.budget ||
-      !formData.location
+      !formData.budget
     ) {
       setError("Please fill in all required fields before posting.");
       return;
@@ -82,7 +81,6 @@ function ClientPostJob() {
         requiredSkill: formData.skillNeeded,
         budget: Number(formData.budget),
         duration: formData.estimatedDuration,
-        location: formData.location,
       });
       cleanForm();
     } catch (submitError) {
@@ -191,18 +189,6 @@ function ClientPostJob() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="font-semibold text-gray-700">Location</span>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={handleChange}
-                    name="location"
-                    placeholder="e.g., Dhanmondi, Dhaka"
-                    required
-                    className="bg-blue-50 rounded-lg px-3 py-2 text-gray-700 focus:border-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-300 outline-none placeholder-gray-400"
-                  />
                 </label>
               </div>
               {error ? (

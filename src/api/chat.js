@@ -26,3 +26,8 @@ export const sendMessage = async ({ conversationId, body }) => {
   return data;
 };
 
+export const deleteConversation = async (conversationId) => {
+  const { data } = await httpClient.delete(`/api/chat/conversations/${conversationId}`);
+  return data;
+};
+

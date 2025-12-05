@@ -47,4 +47,11 @@ router.patch(
   updateUserStatus
 );
 
+router.delete(
+  "/admin/users/:id",
+  authenticate,
+  authorizeRoles("admin"),
+  require("../controllers/userController").deleteUser
+);
+
 module.exports = router;

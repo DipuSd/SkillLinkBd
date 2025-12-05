@@ -71,9 +71,7 @@ function ClientApplicant() {
   };
 
   const handleMessage = (application) => {
-    navigate(`/client/chat?user=${application.provider?._id}`, {
-      state: { jobId: application.job?._id },
-    });
+    navigate(`/client/chat?user=${application.provider?._id}&jobId=${application.job?._id}`);
   };
 
   const handleHire = async (application) => {
@@ -140,6 +138,20 @@ function ClientApplicant() {
               onViewProfile={handleViewProfile}
               onMessage={handleMessage}
               onHire={handleHire}
+              onReject={async (application) => {
+                if (!window.confirm("Are you sure you want to reject this provider? They will not be able to apply to this job again.")) {
+                  return;
+                }
+                try {
+                  await updateStatusMutation.mutateAsync({
+                    applicationId: application._id,
+                    status: "rejected",
+                  });
+                } catch (error) {
+                  console.error("Error rejecting applicant:", error);
+                  alert("Failed to reject applicant.");
+                }
+              }}
               isHiring={updateStatusMutation.isPending}
             />
           )}

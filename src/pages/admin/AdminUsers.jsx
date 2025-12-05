@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listUsers, updateUserStatus } from "../../api/users";
+import { listUsers, updateUserStatus, deleteUser } from "../../api/users";
 
 const roleFilters = [
   { label: "All", value: "all" },
@@ -11,7 +11,6 @@ const roleFilters = [
 
 const statusOptions = [
   { label: "Active", value: "active" },
-  { label: "Suspended", value: "suspended" },
   { label: "Banned", value: "banned" },
 ];
 
@@ -32,6 +31,13 @@ function AdminUsers() {
 
   const { mutateAsync, isPending: isUpdating } = useMutation({
     mutationFn: updateUserStatus,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
@@ -160,6 +166,19 @@ function AdminUsers() {
                           </option>
                         ))}
                       </select>
+                      {user.status === "banned" && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+                              deleteMutation.mutate(user._id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="text-red-500 hover:text-red-700 font-semibold text-sm px-2"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

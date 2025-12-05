@@ -3,10 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
 import {
-  getConversations,
   getMessages,
   sendMessage,
   startConversation,
+  deleteConversation,
+  getConversations,
 } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 
@@ -59,6 +60,15 @@ function ChatInterface() {
       queryClient.invalidateQueries({
         queryKey: ["chat", "messages", variables.conversationId],
       });
+      queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+    },
+  });
+
+  const deleteConversationMutation = useMutation({
+    mutationFn: deleteConversation,
+    onSuccess: () => {
+      setSelectedConversationId(null);
       queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
     },
   });
@@ -281,6 +291,16 @@ function ChatInterface() {
                   {unreadCount ? `${unreadCount} unread` : "Online"}
                 </p>
               </div>
+              <button
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this conversation? This action cannot be undone.")) {
+                    deleteConversationMutation.mutate(selectedConversationId);
+                  }
+                }}
+                className="text-red-500 hover:text-red-700 text-sm font-semibold px-3 py-1 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Delete Conversation
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50 space-y-3">
@@ -333,29 +353,41 @@ function ChatInterface() {
               )}
             </div>
 
-            <div className="flex items-center px-4 py-3 bg-white border-t border-gray-200">
-              <input
-                type="text"
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(event) => setNewMessage(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    handleSend();
-                  }
-                }}
-                className="flex-1 px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400 outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={sendMessageMutation.isPending}
-                className="ml-3 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
-              >
-                {sendMessageMutation.isPending ? "Sending..." : "Send"}
-              </button>
-            </div>
+            {activeConversation?.job &&
+            ["completed", "cancelled", "rejected", "withdrawn"].includes(
+              activeConversation.job.status
+            ) ? (
+              <div className="px-4 py-3 bg-yellow-50 border-t border-yellow-200 text-sm text-yellow-800">
+                <p className="font-semibold">
+                  This conversation is related to a job that has ended.
+                </p>
+                <p>Chat is no longer available for this job.</p>
+              </div>
+            ) : (
+              <div className="flex items-center px-4 py-3 bg-white border-t border-gray-200">
+                <input
+                  type="text"
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={(event) => setNewMessage(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={sendMessageMutation.isPending}
+                  className="ml-3 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                >
+                  {sendMessageMutation.isPending ? "Sending..." : "Send"}
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">

@@ -4,6 +4,7 @@ const {
   createDirectJob,
   listDirectJobs,
   updateDirectJobStatus,
+  processDirectJobPayment,
 } = require("../controllers/directJobController");
 const { authenticate } = require("../middleware/auth");
 const validateRequest = require("../middleware/validateRequest");
@@ -30,6 +31,13 @@ router.patch(
   [body("action").notEmpty().withMessage("Action is required")],
   validateRequest,
   updateDirectJobStatus
+);
+
+router.post(
+  "/direct-jobs/:id/pay",
+  [body("amount").optional().isNumeric()],
+  validateRequest,
+  processDirectJobPayment
 );
 
 module.exports = router;

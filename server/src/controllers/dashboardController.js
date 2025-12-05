@@ -48,6 +48,19 @@ const buildMonthBuckets = () => {
   });
 };
 
+// Calculate distance between two coordinates using Haversine formula (in km)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
 exports.getClientDashboard = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ client: req.user.id })
     .sort({ createdAt: -1 })
@@ -63,17 +76,39 @@ exports.getClientDashboard = asyncHandler(async (req, res) => {
     totalSpent: completedJobs.reduce((sum, job) => sum + (job.budget || 0), 0),
   };
 
-  const requiredSkills = [...new Set(activeJobs.map((job) => job.requiredSkill))];
-
-  const recommendedProviders = await User.find({
+  // Get all active providers
+  const allProviders = await User.find({
     role: "provider",
     status: "active",
-    ...(requiredSkills.length
-      ? { skills: { $in: requiredSkills } }
-      : {}),
-  })
-    .sort({ rating: -1, completedJobs: -1 })
-    .limit(6);
+  });
+
+  // Filter providers within 20km if client has coordinates
+  let recommendedProviders = allProviders;
+  if (req.user.coordinates?.latitude && req.user.coordinates?.longitude) {
+    const clientLat = req.user.coordinates.latitude;
+    const clientLon = req.user.coordinates.longitude;
+    
+    recommendedProviders = allProviders.filter(provider => {
+      if (!provider.coordinates?.latitude || !provider.coordinates?.longitude) {
+        return false; // Exclude providers without coordinates
+      }
+      const distance = calculateDistance(
+        clientLat,
+        clientLon,
+        provider.coordinates.latitude,
+        provider.coordinates.longitude
+      );
+      return distance <= 20; // Within 20km
+    });
+  }
+  
+  // Sort by rating and completed jobs, limit to 6
+  recommendedProviders = recommendedProviders
+    .sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      return b.completedJobs - a.completedJobs;
+    })
+    .slice(0, 6);
 
   const warnings = await Notification.find({
     recipient: req.user.id,
@@ -131,6 +166,43 @@ exports.getProviderDashboard = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(3);
 
+  // Get job recommendations based on skills and location (20km)
+  const provider = await User.findById(providerId);
+  const providerSkills = provider.skills || [];
+  
+  // Find open jobs matching skills
+  const matchingJobs = await Job.find({
+    status: "open",
+    requiredSkill: { $in: providerSkills }
+  }).populate("client");
+
+  // Filter by location (20km) if provider has coordinates
+  let recommendedJobs = matchingJobs;
+  if (provider.coordinates?.latitude && provider.coordinates?.longitude) {
+    const providerLat = provider.coordinates.latitude;
+    const providerLon = provider.coordinates.longitude;
+
+    recommendedJobs = matchingJobs.filter(job => {
+      // If job has specific location coordinates (future feature), use them
+      // For now, check client's location
+      const client = job.client;
+      if (!client?.coordinates?.latitude || !client?.coordinates?.longitude) {
+        return false;
+      }
+
+      const distance = calculateDistance(
+        providerLat,
+        providerLon,
+        client.coordinates.latitude,
+        client.coordinates.longitude
+      );
+      return distance <= 20;
+    });
+  }
+
+  // Limit to 5 recommendations
+  recommendedJobs = recommendedJobs.slice(0, 5);
+
   res.json({
     welcomeMessage: `Hello ${req.user.name.split(" ")[0] || "there"}!`,
     subheading: "You have personalised job recommendations waiting.",
@@ -145,6 +217,14 @@ exports.getProviderDashboard = asyncHandler(async (req, res) => {
       title: job.title,
       status: job.status,
       clientName: job.client?.name,
+    })),
+    recommendedJobs: recommendedJobs.map(job => ({
+      _id: job.id,
+      title: job.title,
+      budget: job.budget,
+      location: job.location,
+      clientName: job.client?.name,
+      postedAt: job.createdAt
     })),
     recentNotifications: recentNotifications.map(mapNotificationSummary),
     warnings: warnings.map(mapNotificationSummary),
@@ -413,6 +493,7 @@ exports.getClientHistory = asyncHandler(async (req, res) => {
       title: job.title,
       budget: job.budget,
       status: job.status,
+      paymentStatus: job.paymentStatus,
       datePosted: job.createdAt,
       dateCompleted: job.status === "completed" ? job.updatedAt : null,
       provider: job.assignedProvider

@@ -35,7 +35,7 @@ exports.createJob = asyncHandler(async (req, res) => {
     requiredSkill: req.body.requiredSkill,
     budget: req.body.budget,
     duration: req.body.duration,
-    location: req.body.location,
+    location: req.user.location || req.user.address || "Dhaka", // Fallback if no location
   });
 
   await User.findByIdAndUpdate(req.user.id, { $inc: { postedJobs: 1 } });
@@ -60,7 +60,6 @@ exports.getJobs = asyncHandler(async (req, res) => {
   if (shouldExcludeApplied) {
     const appliedJobIds = await Application.find({
       provider: req.user.id,
-      status: { $ne: "rejected" },
     }).distinct("job");
 
     if (appliedJobIds.length) {
@@ -84,15 +83,16 @@ exports.getJobs = asyncHandler(async (req, res) => {
   if (shouldPopulateClients) {
     query.populate({
       path: "client",
-      select: "name email location role rating completedJobs postedJobs avatarUrl",
+      select: "name email location role completedJobs postedJobs avatarUrl",
     });
   }
 
   query.populate({ path: "assignedProvider", select: "name email" });
 
   const jobs = await query;
+  const validJobs = jobs.filter((job) => job.client);
 
-  res.json({ jobs });
+  res.json({ jobs: validJobs });
 });
 
 exports.getJobById = asyncHandler(async (req, res) => {
@@ -207,6 +207,10 @@ exports.updateJobStatus = asyncHandler(async (req, res) => {
       $inc: { completedJobs: 1 },
     });
 
+    await User.findByIdAndUpdate(job.client, {
+      $inc: { completedJobs: 1 },
+    });
+
     await Application.updateMany(
       { job: job.id, provider: job.assignedProvider },
       { status: "completed" }
@@ -302,7 +306,6 @@ exports.getRecommendedJobs = asyncHandler(async (req, res) => {
 
   const appliedJobIds = await Application.find({
     provider: req.user.id,
-    status: { $ne: "rejected" },
   }).distinct("job");
 
   const filters = {
@@ -318,7 +321,64 @@ exports.getRecommendedJobs = asyncHandler(async (req, res) => {
   const jobs = await Job.find(filters)
     .sort({ createdAt: -1 })
     .limit(10)
-    .populate({ path: "client", select: "name location" });
+    .populate({ path: "client", select: "name location completedJobs avatarUrl" });
 
-  res.json({ jobs });
+  const validJobs = jobs.filter((job) => job.client);
+
+  res.json({ jobs: validJobs });
+});
+
+exports.processPayment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { amount } = req.body;
+  const io = req.app.get("socket");
+
+  const job = await Job.findById(id);
+  if (!job) {
+    throw createError(404, "Job not found");
+  }
+
+  if (job.client.toString() !== req.user.id && req.user.role !== "admin") {
+    throw createError(403, "Only the client can pay for this job");
+  }
+
+  if (job.status !== "completed") {
+    throw createError(400, "Job must be completed before payment");
+  }
+
+  if (job.paymentStatus === "paid") {
+    throw createError(400, "Job is already paid");
+  }
+
+  if (!job.assignedProvider) {
+    throw createError(400, "No provider assigned to this job");
+  }
+
+  // Process mock payment
+  job.paymentStatus = "paid";
+  job.paymentDate = new Date();
+  job.paymentAmount = amount || job.budget;
+  await job.save();
+
+  // Update provider earnings
+  await User.findByIdAndUpdate(job.assignedProvider, {
+    $inc: { totalEarnings: job.paymentAmount },
+  });
+
+  // Update client spending
+  await User.findByIdAndUpdate(job.client, {
+    $inc: { totalSpent: job.paymentAmount },
+  });
+
+  await notifyUser({
+    recipient: job.assignedProvider,
+    title: "Payment Received",
+    body: `You received ৳${job.paymentAmount} for ${job.title}`,
+    type: "payment",
+    link: `/provider/earnings`,
+    metadata: { jobId: job.id },
+    io,
+  });
+
+  res.json({ job });
 });

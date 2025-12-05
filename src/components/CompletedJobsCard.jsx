@@ -6,7 +6,7 @@ import { FaRegStar } from "react-icons/fa6";
 import { LuStarOff } from "react-icons/lu";
 import ReviewModal from "./ReviewModal";
 
-export default function CompletedJobsCard({ jobs, onReviewSubmit, onReport }) {
+export default function CompletedJobsCard({ jobs, onReviewSubmit, onReport, onDelete, onViewDetails, onMessage, onPay }) {
   const [selectedJob, setSelectedJob] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,13 +58,19 @@ export default function CompletedJobsCard({ jobs, onReviewSubmit, onReport }) {
             <div
               className={` rounded-full px-2 font-semibold h-fit text-white ${
                 job.status === "Completed"
-                  ? "bg-blue-400"
+                  ? job.paymentStatus === "paid"
+                    ? "bg-blue-500" // Fully Paid & Completed
+                    : "bg-orange-500" // Completed but Unpaid
                   : job.status === "In Progress"
                   ? "bg-green-500"
                   : "bg-red-400"
               }`}
             >
-              {job.status}
+              {job.status === "Completed" && job.paymentStatus !== "paid"
+                ? "Unpaid"
+                : job.status === "Completed" && job.paymentStatus === "paid"
+                ? "Paid"
+                : job.status}
             </div>
           </div>
           <hr className="text-gray-300" />
@@ -105,14 +111,32 @@ export default function CompletedJobsCard({ jobs, onReviewSubmit, onReport }) {
           </div>
           {/* Buttons section */}
             <div className="flex flex-col sm:flex-row gap-2">
-            <button className="flex-1 flex items-center justify-center p-1 border border-gray-300 hover:bg-green-500 hover:text-white font-semibold cursor-pointer rounded-xl space-x-2">
-              <IoEyeOutline size={20} />
-              <p>View Details</p>
-            </button>
-            {job.status !== "Completed" ? (
-              <button className="flex-1 flex items-center justify-center p-1 border border-gray-300 hover:bg-green-500 hover:text-white font-semibold cursor-pointer rounded-xl space-x-2">
-                <FiMessageSquare size={20} className="relative top-[2px]" />
-                <p>Message</p>
+            {(job.status === "In Progress" || job.status === "Completed") && job.userName ? (
+              <>
+                <button
+                  onClick={() => onViewDetails?.(job)}
+                  className="flex-1 flex items-center justify-center p-1 border border-gray-300 hover:bg-green-500 hover:text-white font-semibold cursor-pointer rounded-xl space-x-2"
+                >
+                  <IoEyeOutline size={20} />
+                  <p>View Details</p>
+                </button>
+                {job.status !== "Completed" ? (
+                  <button
+                    onClick={() => onMessage?.(job)}
+                    className="flex-1 flex items-center justify-center p-1 border border-gray-300 hover:bg-green-500 hover:text-white font-semibold cursor-pointer rounded-xl space-x-2"
+                  >
+                    <FiMessageSquare size={20} className="relative top-[2px]" />
+                    <p>Message</p>
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+            {job.rawStatus === "open" && onDelete ? (
+              <button
+                onClick={() => onDelete(job)}
+                className="flex-1 flex items-center justify-center p-1 border border-red-200 text-red-500 hover:bg-red-500 hover:text-white font-semibold cursor-pointer rounded-xl space-x-2"
+              >
+                <p>Remove</p>
               </button>
             ) : null}
               {job.canReport && onReport ? (
@@ -133,6 +157,15 @@ export default function CompletedJobsCard({ jobs, onReviewSubmit, onReport }) {
               >
                 <FaRegStar size={20} />
                 <p>Write Review</p>
+              </button>
+            ) : null}
+            
+            {job.status === "Completed" && job.paymentStatus !== "paid" ? (
+              <button
+                onClick={() => onPay?.(job)}
+                className="flex-1 flex items-center justify-center p-1 border border-green-600 bg-green-600 hover:bg-green-700 text-white font-semibold cursor-pointer rounded-xl space-x-2 shadow-md shadow-green-200"
+              >
+                <p>Pay Now</p>
               </button>
             ) : null}
           </div>

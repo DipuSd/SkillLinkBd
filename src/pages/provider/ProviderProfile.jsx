@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
 import { getProviderReviews } from "../../api/reviews";
+import { uploadFile } from "../../api/upload";
 
 const tabs = [
   { label: "Details", value: "details" },
@@ -18,12 +19,15 @@ const tabs = [
   { label: "Reviews", value: "reviews" },
 ];
 
+import LocationPicker from "../../components/LocationPicker";
+
 export default function ProviderProfile() {
   const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [activeTab, setActiveTab] = useState("details");
   const [isSaving, setIsSaving] = useState(false);
+  const [locationData, setLocationData] = useState(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -71,9 +75,8 @@ export default function ProviderProfile() {
     setStatusMessage("");
 
     try {
-      await updateProfile({
+      const payload = {
         name: form.name,
-        location: form.location,
         phone: form.phone,
         bio: form.bio,
         skills: form.skillsInput
@@ -83,7 +86,19 @@ export default function ProviderProfile() {
         hourlyRate: Number(form.hourlyRate) || 0,
         experienceYears: Number(form.experienceYears) || 0,
         avatarUrl: form.avatarUrl,
-      });
+      };
+
+      if (locationData) {
+        payload.location = locationData.locationName;
+        payload.coordinates = {
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+        };
+      } else {
+        payload.location = form.location;
+      }
+
+      await updateProfile(payload);
       setStatusMessage("Profile updated successfully.");
       setIsEditing(false);
     } catch (error) {
@@ -146,10 +161,22 @@ export default function ProviderProfile() {
               <label className="absolute top-20 -right-1 p-2 rounded-full bg-white cursor-pointer text-blue-500 font-semibold hover:bg-blue-500 hover:text-white shadow-md">
                 <FiUpload size={18} />
                 <input
-                  type="url"
-                  name="avatarUrl"
-                  value={form.avatarUrl}
-                  onChange={handleChange}
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    try {
+                      setIsSaving(true);
+                      const { url } = await uploadFile(file);
+                      setForm((prev) => ({ ...prev, avatarUrl: url }));
+                    } catch (error) {
+                      console.error("Upload failed:", error);
+                      setStatusMessage("Failed to upload image.");
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
                   className="hidden"
                 />
               </label>
@@ -279,20 +306,36 @@ export default function ProviderProfile() {
                 <FiPhone className="absolute top-2 left-2 text-gray-400" size={22} />
               </div>
             </label>
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-lg font-semibold text-gray-700">Location</span>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="location"
-                  value={form.location}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                  className="w-full p-2 pl-10 bg-gray-100 rounded-lg focus:border-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-300 outline-none disabled:opacity-70"
+              {isEditing ? (
+                <LocationPicker
+                  onLocationSelect={(data) => {
+                    setLocationData(data);
+                    setForm((prev) => ({ ...prev, location: data.locationName }));
+                  }}
+                  initialLocation={
+                    user?.coordinates
+                      ? {
+                          lat: user.coordinates.latitude,
+                          lng: user.coordinates.longitude,
+                        }
+                      : null
+                  }
                 />
-                <IoLocationOutline className="absolute top-2 left-2 text-gray-400" size={22} />
-              </div>
-            </label>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="location"
+                    value={form.location}
+                    disabled
+                    className="w-full p-2 pl-10 bg-gray-100 rounded-lg disabled:opacity-70"
+                  />
+                  <IoLocationOutline className="absolute top-2 left-2 text-gray-400" size={22} />
+                </div>
+              )}
+            </div>
             <label className="flex flex-col gap-1">
               <span className="text-lg font-semibold text-gray-700">Hourly Rate (৳)</span>
               <input

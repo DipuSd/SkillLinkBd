@@ -2,7 +2,14 @@ const Notification = require("../models/Notification");
 const asyncHandler = require("../utils/asyncHandler");
 
 exports.listNotifications = asyncHandler(async (req, res) => {
-  const notifications = await Notification.find({ recipient: req.user.id })
+  const { unreadOnly } = req.query;
+  
+  const filter = { recipient: req.user.id };
+  if (unreadOnly === "true") {
+    filter.isRead = false;
+  }
+
+  const notifications = await Notification.find(filter)
     .sort({ createdAt: -1 })
     .limit(100);
 

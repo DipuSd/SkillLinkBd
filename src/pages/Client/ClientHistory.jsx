@@ -12,7 +12,10 @@ import CompletedJobsCard from "../../components/CompletedJobsCard";
 import { getClientHistory } from "../../api/dashboard";
 import { createReview } from "../../api/reviews";
 import { createReport } from "../../api/reports";
+import { deleteJob, payForJob } from "../../api/jobs";
 import ReportUserModal from "../../components/ReportUserModal";
+import JobDetailsModal from "../../components/JobDetailsModal";
+import PaymentModal from "../../components/PaymentModal";
 
 const statusFilters = [
   { label: "All", value: "all" },
@@ -28,12 +31,13 @@ export default function ClientHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [reportTarget, setReportTarget] = useState(null);
   const [reportNotice, setReportNotice] = useState("");
+  const [selectedJobDetails, setSelectedJobDetails] = useState(null);
+  const [paymentJob, setPaymentJob] = useState(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["client-history"],
     queryFn: getClientHistory,
-    staleTime: 60_000,
   });
 
   const reviewMutation = useMutation({
@@ -48,6 +52,26 @@ export default function ClientHistory() {
     mutationFn: createReport,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: deleteJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-history"] });
+      queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
+    },
+  });
+
+  const payMutation = useMutation({
+    mutationFn: payForJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-history"] });
+      setPaymentJob(null);
+      alert("Payment successful! Thank you.");
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || "Payment failed.");
     },
   });
 
@@ -135,6 +159,7 @@ export default function ClientHistory() {
       userName: job.provider?.name ?? "Provider",
       occupation: job.provider?.skill ?? "",
       budget: formatCurrency(job.budget),
+      rawBudget: job.budget,
       status: statusLabel,
       rawStatus: job.status,
       datePosted: job.datePosted
@@ -147,6 +172,7 @@ export default function ClientHistory() {
       rating: job.review?.rating,
       reviewComment: job.review?.comment,
       providerId: job.provider?.id,
+      paymentStatus: job.paymentStatus,
       canReport:
         Boolean(job.provider?.id) &&
         ["completed", "in-progress", "cancelled"].includes(job.status),
@@ -227,6 +253,24 @@ export default function ClientHistory() {
               setReportNotice("");
               setReportTarget(job);
             }}
+            onDelete={async (job) => {
+              if (!window.confirm(`Are you sure you want to delete "${job.title}"?`)) return;
+              try {
+                await deleteJobMutation.mutateAsync(job.id);
+              } catch (error) {
+                console.error("Error deleting job:", error);
+                alert("Failed to delete job.");
+              }
+            }}
+            onViewDetails={(job) => {
+              setSelectedJobDetails(job);
+            }}
+            onMessage={(job) => {
+              if (job.providerId) {
+                window.location.href = `/client/chat?user=${job.providerId}&jobId=${job.id}`;
+              }
+            }}
+            onPay={(job) => setPaymentJob(job)}
           />
         )}
       </div>
@@ -264,6 +308,20 @@ export default function ClientHistory() {
         }}
         isSubmitting={reportMutation.isPending}
         error={reportMutation.error?.response?.data?.message}
+      />
+
+      <JobDetailsModal
+        isOpen={Boolean(selectedJobDetails)}
+        onClose={() => setSelectedJobDetails(null)}
+        job={selectedJobDetails}
+      />
+
+      <PaymentModal
+        isOpen={Boolean(paymentJob)}
+        onClose={() => setPaymentJob(null)}
+        job={paymentJob}
+        onPay={(job) => payMutation.mutate({ jobId: job.id, amount: job.rawBudget })}
+        isProcessing={payMutation.isPending}
       />
     </div>
   );

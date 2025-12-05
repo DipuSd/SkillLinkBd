@@ -16,6 +16,8 @@ import {
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { getProviderEarnings } from "../../api/dashboard";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function ProviderEarnings() {
   const { data, isLoading } = useQuery({
@@ -51,6 +53,82 @@ export default function ProviderEarnings() {
     },
   ];
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const currentDate = new Date().toLocaleDateString();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.setTextColor(40);
+    doc.text("Earnings Report", 14, 22);
+    
+    // Add date
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${currentDate}`, 14, 30);
+    
+    // Add metrics section
+    doc.setFontSize(14);
+    doc.setTextColor(40);
+    doc.text("Summary", 14, 42);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(60);
+    doc.text(`Total Earnings: ৳${metrics.totalEarnings ?? 0}`, 14, 50);
+    doc.text(`This Month: ৳${metrics.thisMonth ?? 0}`, 14, 56);
+    doc.text(`Average Rating: ${metrics.averageRating ?? 0}`, 14, 62);
+    doc.text(`Jobs Completed: ${metrics.jobsCompleted ?? 0}`, 14, 68);
+    
+    // Add monthly earnings table
+    if (chartData.length > 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(40);
+      doc.text("Monthly Earnings", 14, 80);
+      
+      const monthlyData = chartData.map(item => [
+        item.name,
+        `৳${item.earnings}`
+      ]);
+      
+      doc.autoTable({
+        startY: 85,
+        head: [['Month', 'Earnings']],
+        body: monthlyData,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+    
+    // Add recent jobs table
+    if (recentJobs.length > 0) {
+      const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 100;
+      
+      doc.setFontSize(14);
+      doc.setTextColor(40);
+      doc.text("Recent Jobs", 14, finalY);
+      
+      const jobsData = recentJobs.map(item => [
+        item.job,
+        item.client,
+        item.date ? new Date(item.date).toLocaleDateString() : 'N/A',
+        `৳${item.payment ?? 0}`,
+        item.rating ?? 'N/A'
+      ]);
+      
+      doc.autoTable({
+        startY: finalY + 5,
+        head: [['Job', 'Client', 'Date', 'Payment', 'Rating']],
+        body: jobsData,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+    
+    // Save the PDF
+    const filename = `earnings_report_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+  };
+
   return (
     <>
       <div className="py-2 overflow-y-auto md:px-6 lg:px-20 mt-2 space-y-5">
@@ -64,7 +142,7 @@ export default function ProviderEarnings() {
           <button
             type="button"
             className="rounded-lg p-2 flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white font-semibold cursor-pointer hover:opacity-80 shadow-md"
-            onClick={() => window.print()}
+            onClick={handleExportPDF}
           >
             <MdOutlineFileDownload size={24} />
             <span>Export Report</span>

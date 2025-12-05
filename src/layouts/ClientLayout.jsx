@@ -42,6 +42,12 @@ const clientMenu = [
     to: "/client/history",
     match: ["/client/history"],
   },
+  {
+    label: "Profile",
+    icon: <IoPeopleOutline />,
+    to: "/client/profile",
+    match: ["/client/profile"],
+  },
 ];
 
 function ClientLayout() {

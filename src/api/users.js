@@ -17,3 +17,7 @@ export const updateUserStatus = async ({ userId, status }) => {
   return data;
 };
 
+export const deleteUser = async (userId) => {
+  await httpClient.delete(`/api/admin/users/${userId}`);
+};
+

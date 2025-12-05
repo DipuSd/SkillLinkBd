@@ -4,12 +4,20 @@ import { IoChatbubbleOutline } from "react-icons/io5";
 import { FiBell } from "react-icons/fi";
 import { MdLogout } from "react-icons/md";
 import { useAuth } from "../context/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNotifications } from "../api/notifications";
+import { useEffect, useRef } from "react";
+import { io } from "socket.io-client";
+
+const socketUrl =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:4000";
 
 function DashboardNavbar({ notificationLink = "/notifications" }) {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const socketRef = useRef(null);
   const isChatRoute = location.pathname.includes("/chat");
   const isAdmin = user?.role === "admin";
   const { data } = useQuery({
@@ -20,6 +28,25 @@ function DashboardNavbar({ notificationLink = "/notifications" }) {
   });
 
   const unreadCount = data?.notifications?.length ?? 0;
+
+  useEffect(() => {
+    if (!token || isAdmin) return undefined;
+
+    const socket = io(socketUrl, {
+      auth: { token },
+    });
+
+    socketRef.current = socket;
+
+    socket.on("notification:new", () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [token, isAdmin, queryClient]);
 
   return (
     <>

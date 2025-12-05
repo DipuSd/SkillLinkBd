@@ -56,6 +56,12 @@ export default function ProviderJobs() {
       queryClient.invalidateQueries({ queryKey: ["provider-applications"] });
       queryClient.invalidateQueries({ queryKey: ["provider-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      alert("Application submitted successfully!");
+    },
+    onError: (error) => {
+      const message =
+        error?.response?.data?.message || "Failed to apply to job.";
+      alert(message);
     },
   });
 

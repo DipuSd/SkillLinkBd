@@ -1,7 +1,6 @@
 import { FaDollarSign } from "react-icons/fa";
 import { FaRegClock } from "react-icons/fa";
 import { IoLocationOutline } from "react-icons/io5";
-import { FaStar } from "react-icons/fa";
 import { MdOutlinePerson } from "react-icons/md";
 
 export default function ClientPostedJobsCards({
@@ -20,7 +19,6 @@ export default function ClientPostedJobsCards({
         const client =
           item.client && typeof item.client === "object" ? item.client : {};
         const clientName = client.name ?? item.clientName ?? "Client";
-        const clientRating = client.rating ?? item.clientRating ?? "N/A";
         const clientCompletedJobs =
           client.completedJobs ??
           item.clientCompletedJobs ??
@@ -74,10 +72,6 @@ export default function ClientPostedJobsCards({
                       Client
                     </span>
                     <h2 className="font-semibold text-gray-700">{clientName}</h2>
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
-                      <FaStar className="text-orange-400" />
-                      <span>{clientRating}</span>
-                    </div>
                   </div>
                 </div>
                 <div className="text-right">

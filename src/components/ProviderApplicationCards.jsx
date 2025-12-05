@@ -21,7 +21,6 @@ export default function ProviderApplicationCards({
   onChat,
   onWithdraw,
   onMarkComplete,
-  onRateClient,
   onReportClient,
 }) {
   if (!items.length) {
@@ -37,7 +36,6 @@ export default function ProviderApplicationCards({
         const budget = item.budget ?? item.proposedBudget ?? 0;
         const showWithdraw = item.canWithdraw && onWithdraw;
         const showComplete = item.canComplete && onMarkComplete;
-        const showRate = item.canRateClient && onRateClient;
         const showReport = item.canReport && onReportClient;
 
         return (
@@ -56,6 +54,15 @@ export default function ProviderApplicationCards({
               >
                 {statusLabel}
               </div>
+              {item.status === "completed" && item.jobStatus === "completed" && item.paymentStatus !== "paid" ? (
+                <div className="bg-orange-100 text-orange-600 px-2 py-1 text-sm font-semibold rounded-full border border-orange-200">
+                  Unpaid
+                </div>
+              ) : item.status === "completed" && item.jobStatus === "completed" && item.paymentStatus === "paid" ? (
+                <div className="bg-green-100 text-green-600 px-2 py-1 text-sm font-semibold rounded-full border border-green-200">
+                  Paid
+                </div>
+              ) : null}
             </div>
             <p className="text-gray-500 text-sm">Client: {item.clientName}</p>
             <div className="flex flex-row items-center space-x-3 text-gray-500 text-sm">
@@ -70,7 +77,10 @@ export default function ProviderApplicationCards({
             </div>
             <hr className="text-gray-300" />
             <div className="flex flex-col sm:flex-row gap-2 py-1 flex-wrap">
-              {status !== "completed" && item.jobStatus !== "completed" ? (
+              {status !== "completed" && 
+               status !== "withdrawn" && 
+               status !== "rejected" && 
+               item.jobStatus !== "completed" ? (
                 <button
                   type="button"
                   onClick={() => onChat?.(item)}
@@ -78,16 +88,6 @@ export default function ProviderApplicationCards({
                 >
                   <IoChatbubbleOutline />
                   <span>Chat</span>
-                </button>
-              ) : null}
-              {showRate ? (
-                <button
-                  type="button"
-                  onClick={() => onRateClient?.(item)}
-                  className="flex-1 p-2 flex items-center justify-center gap-2 rounded-lg border border-gray-300 hover:bg-green-500 hover:text-white font-semibold transition-all duration-200 text-amber-500"
-                >
-                  <FaRegStar />
-                  <span>Rate Client</span>
                 </button>
               ) : null}
               {showReport ? (

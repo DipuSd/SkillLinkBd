@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { FaBoltLightning } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
+import LocationPicker from "../components/LocationPicker";
 
 const skills = [
   "electrician",
@@ -22,8 +23,8 @@ function SignUp() {
     email: "",
     password: "",
     confirmPassword: "",
-    location: "",
   });
+  const [locationData, setLocationData] = useState(null);
   const [providerForm, setProviderForm] = useState({
     primarySkill: "",
     additionalSkills: [],
@@ -82,8 +83,16 @@ function SignUp() {
         email: form.email,
         password: form.password,
         role,
-        location: form.location,
       };
+
+      // Add location data if provided
+      if (locationData) {
+        payload.location = locationData.locationName;
+        payload.coordinates = {
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+        };
+      }
 
       if (role === "provider") {
         payload.skills = [
@@ -282,20 +291,13 @@ function SignUp() {
                     </div>
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-lg font-bold text-gray-700">
-                        Location
-                      </span>
-                      <input
-                        type="text"
-                        name="location"
-                        value={form.location}
-                        onChange={handleChange}
-                        placeholder="e.g., Dhanmondi, Dhaka"
+                    <div>
+                      <LocationPicker
+                        value={locationData}
+                        onChange={setLocationData}
                         required
-                        className="bg-gray-100 rounded-lg px-3 py-2 text-gray-700 focus:border-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-300 outline-none"
                       />
-                    </label>
+                    </div>
                     <label className="flex flex-col gap-1">
                       <span className="text-lg font-bold text-gray-700">
                         Availability
@@ -316,20 +318,11 @@ function SignUp() {
                   </div>
                 </div>
               ) : (
-                <label className="flex flex-col gap-1">
-                  <span className="text-lg font-bold text-gray-700">
-                    Location
-                  </span>
-                  <input
-                    type="text"
-                    name="location"
-                    value={form.location}
-                    onChange={handleChange}
-                    placeholder="e.g., Dhanmondi, Dhaka"
-                    required
-                    className="bg-gray-100 rounded-lg px-3 py-2 text-gray-700 focus:border-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-300 outline-none"
-                  />
-                </label>
+                <LocationPicker
+                  value={locationData}
+                  onChange={setLocationData}
+                  required
+                />
               )}
               <label className="flex items-center space-x-2 my-2">
                 <input

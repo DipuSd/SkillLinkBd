@@ -1,3 +1,4 @@
+
 import httpClient from "./httpClient";
 
 export const getJobs = async (params = {}) => {
@@ -44,8 +45,12 @@ export const assignJobProvider = async ({ jobId, providerId }) => {
   return data;
 };
 
+export const payForJob = async ({ jobId, amount }) => {
+  const { data } = await httpClient.post(`/api/jobs/${jobId}/pay`, { amount });
+  return data;
+};
+
 export const getRecommendedJobs = async (params = {}) => {
   const { data } = await httpClient.get("/api/jobs/recommended", { params });
   return data;
 };
-

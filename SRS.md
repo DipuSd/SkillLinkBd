@@ -204,50 +204,6 @@ A web-based system connecting clients and providers through skill- and location-
 1. **Landing Page** – Hero, how it works, top skills, testimonials.  
 2. **Auth Pages** – Login, Register (Client/Provider), Forgot Password.  
 3. **Client Dashboard** – Post job, manage applicants, view analytics.  
-4. **Provider Dashboard** – View jobs, apply, manage tasks, earnings.  
-5. **Admin Dashboard** – User list, reports list, ban/suspend panel, system stats.  
-6. **Chat Page** – List of contacts and message panel.  
-7. **Profile Page** – Edit details, upload photo, manage visibility.  
-8. **Job Details Page** – Job info, apply/hire button, similar jobs section.  
-9. **Report User Page/Modal** – Reason dropdown, description field, submit button.  
-10. **Notifications Panel** – Real-time job, chat, and report alerts.
-
----
-
-## 8. Backend API Endpoints (Example Structure)
-
-**Auth Routes**
-- POST `/api/auth/register`
-- POST `/api/auth/login`
-
-**Job Routes**
-- GET `/api/jobs`
-- POST `/api/jobs`
-- PUT `/api/jobs/:id`
-- DELETE `/api/jobs/:id`
-
-**Application Routes**
-- POST `/api/apply`
-- GET `/api/applications/:userId`
-
-**Chat Routes**
-- POST `/api/chat/send`
-- GET `/api/chat/:userId`
-
-**Review Routes**
-- POST `/api/reviews`
-- GET `/api/reviews/:providerId`
-
-**Report Routes**
-- POST `/api/report` → submit report  
-- GET `/api/admin/reports` → admin view all  
-- PUT `/api/admin/report/:id/action` → take action (warn/suspend/ban)
-
-**Admin Routes**
-- GET `/api/admin/users`
-- PUT `/api/admin/user/:id/ban`
-
----
 
 ## 9. Technologies
 

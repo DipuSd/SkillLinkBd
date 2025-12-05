@@ -69,6 +69,20 @@ exports.applyToJob = asyncHandler(async (req, res) => {
     throw createError(400, "You cannot apply to your own job");
   }
 
+  // Check if provider already has an active application/job with this client
+  const existingActiveApplication = await Application.findOne({
+    provider: req.user.id,
+    client: job.client,
+    status: { $in: ["applied", "shortlisted", "hired"] },
+  });
+
+  if (existingActiveApplication) {
+    throw createError(
+      400,
+      "You already have an active application or job with this client. Please complete or withdraw it before applying to another."
+    );
+  }
+
   const existing = await Application.findOne({
     job: jobId,
     provider: req.user.id,
@@ -128,7 +142,7 @@ let applications = await Application.find(filters)
   .limit(200)
   .populate({
     path: "job",
-    select: "title budget status client assignedProvider createdAt",
+    select: "title budget status paymentStatus client assignedProvider createdAt",
     populate: { path: "client", select: "name" },
   })
   .populate({
@@ -281,6 +295,11 @@ exports.updateApplicationStatus = asyncHandler(async (req, res) => {
         $inc: { completedJobs: 1 },
       });
 
+      // Update client's completed jobs count
+      await User.findByIdAndUpdate(job.client, {
+        $inc: { completedJobs: 1 },
+      });
+
       await deleteJobConversations({ jobId: job._id });
 
       await notifyUser({
@@ -350,6 +369,10 @@ exports.updateApplicationStatus = asyncHandler(async (req, res) => {
     await job.save();
 
     await User.findByIdAndUpdate(application.provider, {
+      $inc: { completedJobs: 1 },
+    });
+
+    await User.findByIdAndUpdate(job.client, {
       $inc: { completedJobs: 1 },
     });
 

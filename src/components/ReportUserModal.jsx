@@ -4,6 +4,7 @@ import { IoClose } from "react-icons/io5";
 const reportReasons = [
   { value: "harassment", label: "Harassment or abuse" },
   { value: "fraud", label: "Fraud or payment issues" },
+  { value: "non-payment", label: "Non-payment for completed work" },
   { value: "spam", label: "Spam or fake activity" },
   { value: "conduct", label: "Unprofessional conduct" },
   { value: "other", label: "Other" },

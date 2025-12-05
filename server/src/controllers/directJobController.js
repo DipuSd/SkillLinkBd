@@ -153,3 +153,58 @@ exports.updateDirectJobStatus = asyncHandler(async (req, res) => {
   res.json({ directJob });
 });
 
+exports.processDirectJobPayment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { amount } = req.body;
+  const io = req.app.get("socket");
+
+  const directJob = await DirectJob.findById(id);
+
+  if (!directJob) {
+    throw createError(404, "Direct job not found");
+  }
+
+  // Only client or admin can pay
+  if (req.user.role !== "admin" && directJob.client.toString() !== req.user.id) {
+    throw createError(403, "Only the client can pay for this job");
+  }
+
+  // Job must be completed
+  if (directJob.status !== "completed") {
+    throw createError(400, "Only completed jobs can be paid");
+  }
+
+  // Check if already paid
+  if (directJob.paymentStatus === "paid") {
+    throw createError(400, "This job has already been paid");
+  }
+
+  // Process mock payment
+  directJob.paymentStatus = "paid";
+  directJob.paymentDate = new Date();
+  directJob.paymentAmount = amount || directJob.budget;
+  await directJob.save();
+
+  // Update provider earnings
+  await User.findByIdAndUpdate(directJob.provider, {
+    $inc: { totalEarnings: directJob.paymentAmount },
+  });
+
+  // Update client spending
+  await User.findByIdAndUpdate(directJob.client, {
+    $inc: { totalSpent: directJob.paymentAmount },
+  });
+
+  // Notify provider
+  await notifyUser({
+    recipient: directJob.provider,
+    title: "Payment received",
+    body: `You received ৳${directJob.paymentAmount} for "${directJob.title}"`,
+    type: "payment",
+    metadata: { directJobId: directJob.id, amount: directJob.paymentAmount },
+    io,
+  });
+
+  res.json({ directJob });
+});
+

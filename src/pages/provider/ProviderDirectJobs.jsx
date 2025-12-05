@@ -13,7 +13,6 @@ export default function ProviderDirectJobs() {
   const directJobsQuery = useQuery({
     queryKey: ["direct-jobs", "provider"],
     queryFn: () => getDirectJobs({ scope: "provider" }),
-    staleTime: 15_000,
   });
 
   const updateStatusMutation = useMutation({
@@ -61,79 +60,297 @@ export default function ProviderDirectJobs() {
         </p>
       </header>
 
-      <Section
-        title="New requests"
-        subtitle="Review and respond to client invites."
-        isLoading={directJobsQuery.isLoading}
-        emptyMessage="No pending invitations right now."
-      >
-        {requests.map((job) => (
-          <ProviderDirectJobCard
-            key={job._id}
-            job={job}
-            actions={[
-              {
-                label: "Accept",
-                variant: "primary",
-                onClick: () => handleStatusChange(job._id, "accept"),
-                loading: updateStatusMutation.isPending,
-              },
-              {
-                label: "Decline",
-                variant: "danger",
-                onClick: () => handleStatusChange(job._id, "decline"),
-                loading: updateStatusMutation.isPending,
-              },
-            ]}
-            onMessage={() => navigate(`/provider/chat?user=${job.client?._id}`)}
-          />
-        ))}
-      </Section>
+      {/* New Requests Table */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">New requests</h2>
+          <p className="text-sm text-gray-500">Review and respond to client invites.</p>
+        </div>
+        {directJobsQuery.isLoading ? (
+          <div className="h-32 rounded-2xl border border-gray-200 bg-gray-50 animate-pulse"></div>
+        ) : requests.length === 0 ? (
+          <p className="text-sm text-gray-400">No pending invitations right now.</p>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Job Title
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Budget
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {requests.map((job) => (
+                  <tr key={job._id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {job.client?.name ?? "Client"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-800 font-medium">{job.title}</div>
+                      <div className="text-xs text-gray-500 line-clamp-2">{job.description}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {job.budget ? (
+                        <span className="text-sm font-semibold text-green-600">৳{job.budget}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{job.location || "N/A"}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold capitalize bg-orange-100 text-orange-700">
+                        {job.status.replace("-", " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/provider/chat?user=${job.client?._id}`)}
+                          className="px-3 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-green-500 hover:text-white transition-colors font-semibold"
+                        >
+                          Message
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange(job._id, "accept")}
+                          disabled={updateStatusMutation.isPending}
+                          className="px-3 py-1 rounded-lg border border-blue-400 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors font-semibold disabled:opacity-50"
+                        >
+                          {updateStatusMutation.isPending ? "Working..." : "Accept"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange(job._id, "decline")}
+                          disabled={updateStatusMutation.isPending}
+                          className="px-3 py-1 rounded-lg border border-red-400 text-red-500 hover:bg-red-500 hover:text-white transition-colors font-semibold disabled:opacity-50"
+                        >
+                          {updateStatusMutation.isPending ? "Working..." : "Decline"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
-      <Section
-        title="Active"
-        subtitle="Jobs you have accepted and are currently delivering."
-        isLoading={directJobsQuery.isLoading}
-        emptyMessage="Accept an invite to see it here."
-      >
-        {active.map((job) => (
-          <ProviderDirectJobCard
-            key={job._id}
-            job={job}
-            actions={[
-              {
-                label: "Mark complete",
-                variant: "primary",
-                onClick: () => handleStatusChange(job._id, "complete"),
-                loading: updateStatusMutation.isPending,
-              },
-              {
-                label: "Report",
-                variant: "ghost",
-                onClick: () =>
-                  setReportTarget({
-                    jobId: job._id,
-                    clientId: job.client?._id,
-                    clientName: job.client?.name,
-                    title: job.title,
-                  }),
-              },
-            ]}
-            onMessage={() => navigate(`/provider/chat?user=${job.client?._id}`)}
-          />
-        ))}
-      </Section>
+      {/* Active Jobs Table */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">Active</h2>
+          <p className="text-sm text-gray-500">Jobs you have accepted and are currently delivering.</p>
+        </div>
+        {directJobsQuery.isLoading ? (
+          <div className="h-32 rounded-2xl border border-gray-200 bg-gray-50 animate-pulse"></div>
+        ) : active.length === 0 ? (
+          <p className="text-sm text-gray-400">Accept an invite to see it here.</p>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Job Title
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Budget
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {active.map((job) => (
+                  <tr key={job._id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {job.client?.name ?? "Client"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-800 font-medium">{job.title}</div>
+                      <div className="text-xs text-gray-500 line-clamp-2">{job.description}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {job.budget ? (
+                        <span className="text-sm font-semibold text-green-600">৳{job.budget}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{job.location || "N/A"}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold capitalize bg-blue-100 text-blue-700">
+                        {job.status.replace("-", " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/provider/chat?user=${job.client?._id}`)}
+                          className="px-3 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-green-500 hover:text-white transition-colors font-semibold"
+                        >
+                          Message
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange(job._id, "complete")}
+                          disabled={updateStatusMutation.isPending}
+                          className="px-3 py-1 rounded-lg border border-blue-400 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors font-semibold disabled:opacity-50"
+                        >
+                          {updateStatusMutation.isPending ? "Working..." : "Mark Complete"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setReportTarget({
+                              jobId: job._id,
+                              clientId: job.client?._id,
+                              clientName: job.client?.name,
+                              title: job.title,
+                            })
+                          }
+                          className="px-3 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors font-semibold"
+                        >
+                          Report
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
-      <Section
-        title="History"
-        subtitle="Recently completed or closed direct jobs."
-        isLoading={directJobsQuery.isLoading}
-        emptyMessage="No history yet."
-      >
-        {history.map((job) => (
-          <ProviderDirectJobCard key={job._id} job={job} compact />
-        ))}
-      </Section>
+      {/* History Table */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">History</h2>
+          <p className="text-sm text-gray-500">Recently completed or closed direct jobs.</p>
+        </div>
+        {directJobsQuery.isLoading ? (
+          <div className="h-32 rounded-2xl border border-gray-200 bg-gray-50 animate-pulse"></div>
+        ) : history.length === 0 ? (
+          <p className="text-sm text-gray-400">No history yet.</p>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Job Title
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Budget
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {history.map((job) => (
+                  <tr key={job._id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {job.client?.name ?? "Client"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-800 font-medium">{job.title}</div>
+                      <div className="text-xs text-gray-500 line-clamp-2">{job.description}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {job.budget ? (
+                        <span className="text-sm font-semibold text-green-600">৳{job.budget}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{job.location || "N/A"}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                            job.status === "completed"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {job.status.replace("-", " ")}
+                        </span>
+                        {job.status === "completed" && job.paymentStatus !== "paid" ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-600 border border-orange-200">
+                            Unpaid
+                          </span>
+                        ) : job.status === "completed" && job.paymentStatus === "paid" ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-600 border border-green-200">
+                            Paid
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">
+                        {job.updatedAt ? new Date(job.updatedAt).toLocaleDateString() : "N/A"}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <ReportUserModal
         isOpen={Boolean(reportTarget)}
@@ -165,106 +382,3 @@ export default function ProviderDirectJobs() {
     </div>
   );
 }
-
-function Section({ title, subtitle, children, emptyMessage, isLoading }) {
-  return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-        <p className="text-sm text-gray-500">{subtitle}</p>
-      </div>
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-32 rounded-2xl border border-gray-200 bg-gray-50 animate-pulse"
-            ></div>
-          ))}
-        </div>
-      ) : Array.isArray(children) && children.length === 0 ? (
-        <p className="text-sm text-gray-400">{emptyMessage}</p>
-      ) : (
-        children
-      )}
-    </section>
-  );
-}
-
-function ProviderDirectJobCard({ job, actions = [], onMessage, compact = false }) {
-  return (
-    <div className="p-4 rounded-2xl border border-gray-200 bg-white space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-400">Client</p>
-          <h4 className="text-lg font-semibold text-gray-900">
-            {job.client?.name ?? "Client"}
-          </h4>
-        </div>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-            job.status === "completed"
-              ? "bg-green-100 text-green-700"
-              : job.status === "in-progress"
-              ? "bg-blue-100 text-blue-700"
-              : job.status === "requested"
-              ? "bg-orange-100 text-orange-700"
-              : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          {job.status.replace("-", " ")}
-        </span>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold text-gray-800">{job.title}</h3>
-        <p className="text-sm text-gray-500 line-clamp-3">
-          {job.description}
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-        {job.budget ? (
-          <span className="font-semibold text-green-600">
-            Budget: ৳{job.budget}
-          </span>
-        ) : null}
-        {job.location ? <span>{job.location}</span> : null}
-        {job.preferredDate ? (
-          <span>
-            Preferred: {new Date(job.preferredDate).toLocaleDateString()}
-          </span>
-        ) : null}
-      </div>
-      {!compact ? (
-        <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-2">
-          {onMessage ? (
-            <button
-              type="button"
-              onClick={onMessage}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-green-500 hover:text-white transition-colors"
-            >
-              Message
-            </button>
-          ) : null}
-          {actions.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={action.onClick}
-              disabled={action.loading}
-              className={`flex-1 rounded-lg px-3 py-2 font-semibold transition-colors ${
-                action.variant === "primary"
-                  ? "border border-blue-400 text-blue-600 hover:bg-blue-500 hover:text-white"
-                  : action.variant === "danger"
-                  ? "border border-red-400 text-red-500 hover:bg-red-500 hover:text-white"
-                  : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-              } disabled:opacity-50`}
-            >
-              {action.loading ? "Working..." : action.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
