@@ -13,6 +13,19 @@ const statusStyles = {
   withdrawn: "bg-gray-500",
 };
 
+/**
+ * ApplicantCards Component
+ * 
+ * Displays a list of job applicants (or applications for a provider).
+ * Used by Clients to view applicants and Providers to view their own applications.
+ * 
+ * @param {Object[]} applicants - List of application objects
+ * @param {Function} onViewProfile - Callback to view applicant profile
+ * @param {Function} onMessage - Callback to message applicant
+ * @param {Function} onHire - Callback to hire applicant
+ * @param {Function} onReject - Callback to reject applicant
+ * @param {boolean} [isHiring=false] - Loading state during hiring process
+ */
 function ApplicantCards({
   applicants = [],
   onViewProfile,

@@ -3,6 +3,16 @@ import { FaRegClock } from "react-icons/fa";
 import { IoLocationOutline } from "react-icons/io5";
 import { MdOutlinePerson } from "react-icons/md";
 
+/**
+ * ClientPostedJobsCards Component
+ * 
+ * Displays individual cards for jobs posted by a client.
+ * Includes job details, client info, and action buttons.
+ * 
+ * @param {Object[]} items - List of job items
+ * @param {Function} onViewDetails - Callback to view job details
+ * @param {Function} onApply - Callback to apply for the job
+ */
 export default function ClientPostedJobsCards({
   items = [],
   onViewDetails,

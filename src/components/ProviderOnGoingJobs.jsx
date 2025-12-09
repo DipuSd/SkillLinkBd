@@ -1,3 +1,10 @@
+/**
+ * ProviderOnGoingJobs Component
+ * 
+ * Simplified list of ongoing jobs for the provider dashboard.
+ * 
+ * @param {Object[]} items - List of ongoing job items
+ */
 export default function ProviderOnGoingJobs({ items = [] }) {
   if (!items.length) {
     return (

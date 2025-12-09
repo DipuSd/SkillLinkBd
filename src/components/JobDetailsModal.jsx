@@ -2,6 +2,16 @@ import { IoClose } from "react-icons/io5";
 import { FaDollarSign, FaRegClock } from "react-icons/fa";
 import { IoLocationOutline } from "react-icons/io5";
 
+/**
+ * JobDetailsModal Component
+ * 
+ * Displays full details of a job in a modal dialog.
+ * Includes budget, duration, location, description, and status.
+ * 
+ * @param {boolean} isOpen - Modal visibility state
+ * @param {Function} onClose - Callback to close modal
+ * @param {Object} job - Job object to display
+ */
 export default function JobDetailsModal({ isOpen, onClose, job }) {
   if (!isOpen || !job) return null;
 

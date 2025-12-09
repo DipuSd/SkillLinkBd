@@ -2,12 +2,32 @@ import { useState } from "react";
 import { IoClose, IoShieldCheckmark } from "react-icons/io5";
 import { FaLock, FaMobileAlt } from "react-icons/fa";
 
+/**
+ * PaymentModal Component
+ * 
+ * A modal that simulates a payment process (specifically bKash).
+ * It collects the user's mobile number and PIN to authorize a payment for a job.
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Controls the visibility of the modal.
+ * @param {Function} props.onClose - Callback to close the modal.
+ * @param {Object} props.job - The job object containing payment details (e.g., budget, title).
+ * @param {Function} props.onPay - Callback function executed when payment is confirmed. Receives the job object.
+ * @param {boolean} props.isProcessing - Loading state during payment processing.
+ */
 export default function PaymentModal({ isOpen, onClose, job, onPay, isProcessing }) {
+  // State for the bKash account number input
   const [bkashNumber, setBkashNumber] = useState("");
+  // State for the PIN input
   const [pin, setPin] = useState("");
 
+  // Early return if modal is closed or job details are missing
   if (!isOpen || !job) return null;
 
+  /**
+   * Handles the form submission for payment.
+   * Calls the onPay prop with the current job details.
+   */
   const handleSubmit = (e) => {
     e.preventDefault();
     onPay(job);
@@ -15,8 +35,9 @@ export default function PaymentModal({ isOpen, onClose, job, onPay, isProcessing
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      {/* Modal Content Wrapper with animation */}
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        {/* Header */}
+        {/* Header Section: Title and Close Button */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-[#E2136E] text-white">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold">bKash Payment</h2>
@@ -30,7 +51,7 @@ export default function PaymentModal({ isOpen, onClose, job, onPay, isProcessing
           </button>
         </div>
 
-        {/* Content */}
+        {/* Main Content Area: Payment Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="text-center space-y-1">
             <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -45,6 +66,7 @@ export default function PaymentModal({ isOpen, onClose, job, onPay, isProcessing
           </div>
 
           <div className="space-y-4">
+            {/* Input Field: bKash Account Number */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">
                 Your bKash Account Number
@@ -61,6 +83,7 @@ export default function PaymentModal({ isOpen, onClose, job, onPay, isProcessing
               </div>
             </div>
 
+            {/* Input Field: PIN */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">
                 Enter PIN

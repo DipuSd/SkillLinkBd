@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * Review Model Schema
+ * 
+ * Represents reviews/ratings given after job completion.
+ * Clients can review providers and vice versa.
+ */
 const reviewSchema = new mongoose.Schema(
   {
     job: {
@@ -51,7 +57,8 @@ const reviewSchema = new mongoose.Schema(
   }
 );
 
+// Database indexes for queries
 reviewSchema.index({ provider: 1, createdAt: -1, reviewerRole: 1 });
-reviewSchema.index({ job: 1, reviewerRole: 1 }, { unique: true });
+reviewSchema.index({ job: 1, reviewerRole: 1 }, { unique: true }); // One review per role per job
 
 module.exports = mongoose.model("Review", reviewSchema);

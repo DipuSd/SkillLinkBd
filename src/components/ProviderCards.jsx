@@ -10,6 +10,18 @@ const statusVariants = {
   unavailable: "bg-red-600",
 };
 
+/**
+ * ProviderCards Component
+ * 
+ * Displays a list of providers (for Clients to view).
+ * Shows provider stats (rating, jobs, experience, rate) and actions (Contact, Hire).
+ * 
+ * @param {Object[]} providers - List of provider objects
+ * @param {Function} onContact - Callback to contact provider
+ * @param {Function} onHire - Callback to hire provider
+ * @param {string} [contactLabel="Contact"] - Label for contact button
+ * @param {string} [hireLabel="Hire Now"] - Label for hire button
+ */
 function ProviderCards({
   providers = [],
   onContact,
@@ -60,7 +72,7 @@ function ProviderCards({
                 </div>
               </div>
               <div
-                className={`text-white text-xs font-semibold rounded-full px-3 py-1 capitalize ${
+                className={`text-white text-xs font-semibold rounded-full px-3 py-1 h-fit capitalize ${
                   statusVariants[status] ?? "bg-green-600"
                 }`}
               >

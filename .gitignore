@@ -23,7 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# text files
-# SRS.md
-# .env
-# MONGODB_SCHEMA.md
+text files
+SRS.md
+.env
+MONGODB_SCHEMA.md
+*.md

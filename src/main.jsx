@@ -7,6 +7,13 @@ import App from "./App.jsx";
 
 const queryClient = new QueryClient();
 
+/**
+ * Application Entry Point
+ * 
+ * Initializes the React application.
+ * - Wraps App in StrictMode, BrowserRouter, and QueryClientProvider.
+ * - Mounts to the root DOM element.
+ */
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>

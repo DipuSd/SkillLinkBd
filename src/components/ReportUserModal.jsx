@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { IoClose } from "react-icons/io5";
 
+/**
+ * Helper constant defining the available reasons for reporting a user.
+ * Each object contains a 'value' for backend processing and a 'label' for UI display.
+ */
 const reportReasons = [
   { value: "harassment", label: "Harassment or abuse" },
   { value: "fraud", label: "Fraud or payment issues" },
@@ -10,6 +14,21 @@ const reportReasons = [
   { value: "other", label: "Other" },
 ];
 
+/**
+ * ReportUserModal Component
+ * 
+ * A modal dialog that allows users to submit a report against another user (e.g., a Provider or Client).
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Controls the visibility of the modal.
+ * @param {Function} props.onClose - Callback function to close the modal.
+ * @param {string} props.subjectName - The name of the user being reported (displayed in the title).
+ * @param {string} props.subjectRoleLabel - The role of the user being reported (e.g., 'provider', 'client'). Defaults to 'user'.
+ * @param {string} [props.context] - Optional context string (e.g., job title) to display for clarity.
+ * @param {Function} props.onSubmit - Callback function triggered when the form is valid and submitted. Receives the report data object.
+ * @param {boolean} props.isSubmitting - Loading state to disable controls while the report is being sent.
+ * @param {string} [props.error] - External error message to display (e.g., from the API response).
+ */
 export default function ReportUserModal({
   isOpen,
   onClose,
@@ -20,11 +39,16 @@ export default function ReportUserModal({
   isSubmitting,
   error: externalError,
 }) {
+  // State for the selected reason from the dropdown
   const [reason, setReason] = useState("");
+  // State for the detailed description of the issue
   const [description, setDescription] = useState("");
+  // State for an optional URL to evidence (screenshots, etc.)
   const [evidenceUrl, setEvidenceUrl] = useState("");
+  // Local error state for form validation messages
   const [error, setError] = useState("");
 
+  // Reset the form state whenever the modal is closed/re-opened to ensure a fresh state.
   useEffect(() => {
     if (!isOpen) {
       setReason("");
@@ -38,20 +62,27 @@ export default function ReportUserModal({
     return null;
   }
 
+  /**
+   * Handles the form submission.
+   * Validates the input fields before calling the parent's onSubmit handler.
+   */
   const handleSubmit = (event) => {
     event.preventDefault();
     setError("");
 
+    // Validation: Reason is mandatory
     if (!reason) {
       setError("Please select a reason.");
       return;
     }
 
+    // Validation: Description is mandatory and cannot be empty whitespace
     if (!description.trim()) {
       setError("Please describe the issue.");
       return;
     }
 
+    // Call the parent onSubmit prop with the potentially sanitized data
     onSubmit({
       reason,
       description: description.trim(),
@@ -59,14 +90,19 @@ export default function ReportUserModal({
     });
   };
 
+  /**
+   * Closes the modal safely, preventing closure during an active submission.
+   */
   const closeModal = () => {
-    if (isSubmitting) return;
+    if (isSubmitting) return; // Prevent closing if currently submitting
     onClose?.();
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4 py-8">
+      {/* Modal Container */}
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl p-6 relative">
+        {/* Close Button (top-right absolute) */}
         <button
           type="button"
           onClick={closeModal}

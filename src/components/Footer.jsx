@@ -1,6 +1,11 @@
 import { FaBoltLightning } from "react-icons/fa6";
 import { LuCopyright } from "react-icons/lu";
 
+/**
+ * Footer Component
+ * 
+ * Public facing footer with quick links, copyright, and platform info.
+ */
 function Footer() {
   const getYear = () => {
     return new Date().getFullYear();

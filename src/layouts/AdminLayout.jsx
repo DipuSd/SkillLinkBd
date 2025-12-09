@@ -31,6 +31,12 @@ const adminMenu = [
   },
 ];
 
+/**
+ * AdminLayout Component
+ * 
+ * Defines the dashboard structure for Admin users.
+ * Configures the side menu with Admin-specific links (Dashboard, Insights, Users, Reports).
+ */
 function AdminLayout() {
   return (
     <DashboardLayout

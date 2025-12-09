@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * Message Model Schema
+ * 
+ * Represents individual messages within a conversation.
+ * Tracks sender, message content, and read status.
+ */
 const messageSchema = new mongoose.Schema(
   {
     conversation: {
@@ -39,6 +45,7 @@ const messageSchema = new mongoose.Schema(
   }
 );
 
+// Database index for retrieving messages in chronological order
 messageSchema.index({ conversation: 1, createdAt: 1 });
 
 module.exports = mongoose.model("Message", messageSchema);

@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * Application Model Schema
+ * 
+ * Represents a provider's application to a job posting.
+ * Tracks application status and proposed budget.
+ */
 const applicationSchema = new mongoose.Schema(
   {
     job: {
@@ -54,6 +60,7 @@ const applicationSchema = new mongoose.Schema(
   }
 );
 
+// Ensure a provider can only apply once to each job
 applicationSchema.index({ job: 1, provider: 1 }, { unique: true });
 
 module.exports = mongoose.model("Application", applicationSchema);

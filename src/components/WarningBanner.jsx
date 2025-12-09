@@ -7,6 +7,15 @@ const getWarningKey = (warning) =>
   warning?.metadata?.id ??
   `${warning?.title ?? ""}-${warning?.timeStamp ?? ""}`;
 
+/**
+ * WarningBanner Component
+ * 
+ * Displays warning messages, typically for admin actions or constraints.
+ * 
+ * @param {Object[]} warnings - List of warning objects
+ * @param {boolean} [dismissible=false] - Whether warnings can be dismissed
+ * @param {Function} [onDismiss] - Callback when a warning is dismissed
+ */
 function WarningBanner({ warnings = [], dismissible = false, onDismiss }) {
   const [dismissedKeys, setDismissedKeys] = useState([]);
 

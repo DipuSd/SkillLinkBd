@@ -50,6 +50,12 @@ const clientMenu = [
   },
 ];
 
+/**
+ * ClientLayout Component
+ * 
+ * Defines the dashboard structure for Client users.
+ * Configures the side menu with Client-specific links (Post Job, Applicants, Find Providers, etc.).
+ */
 function ClientLayout() {
   return (
     <DashboardLayout

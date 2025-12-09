@@ -15,6 +15,15 @@ const socketUrl =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:4000";
 
+/**
+ * ChatInterface Component
+ * 
+ * Full-featured chat UI with real-time capabilities via Socket.IO.
+ * - Conversation list with search and unread counts.
+ * - Real-time messaging window.
+ * - Support for job-related conversations.
+ * - Handles connection, message sending, and updates.
+ */
 function ChatInterface() {
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
@@ -24,6 +33,7 @@ function ChatInterface() {
   const socketRef = useRef(null);
   const startConversationOnceRef = useRef(null);
 
+  // Query: Fetch all conversations
   const conversationsQuery = useQuery({
     queryKey: ["chat", "conversations"],
     queryFn: getConversations,
@@ -35,6 +45,7 @@ function ChatInterface() {
     [conversationsQuery.data]
   );
 
+  // Query: Fetch messages for selected conversation
   const messagesQuery = useQuery({
     queryKey: ["chat", "messages", selectedConversationId],
     queryFn: () => getMessages(selectedConversationId),
@@ -60,7 +71,6 @@ function ChatInterface() {
       queryClient.invalidateQueries({
         queryKey: ["chat", "messages", variables.conversationId],
       });
-      queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
       queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
     },
   });
@@ -104,6 +114,7 @@ function ChatInterface() {
     });
   }, [newMessage, selectedConversationId, sendMessageMutation]);
 
+  // Effect: Socket connection and global event listeners
   useEffect(() => {
     if (!token) return undefined;
 

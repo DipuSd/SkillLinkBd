@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * Report Model Schema
+ * 
+ * Represents user reports against other users for misconduct.
+ * Tracks report details, status, and admin actions taken.
+ */
 const reportSchema = new mongoose.Schema(
   {
     reporter: {
@@ -62,6 +68,7 @@ const reportSchema = new mongoose.Schema(
   }
 );
 
+// Database index for admin dashboard queries
 reportSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Report", reportSchema);

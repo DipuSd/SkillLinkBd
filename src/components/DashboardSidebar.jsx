@@ -1,5 +1,13 @@
 import { NavLink, useLocation } from "react-router-dom";
 
+/**
+ * DashboardSidebar Component
+ * 
+ * Side navigation menu for dashboard layouts.
+ * Supports active state highlighting and notification badges.
+ * 
+ * @param {Object[]} items - List of navigation items {to, label, icon, badge, match}
+ */
 function DashboardSidebar({ items = [] }) {
   const location = useLocation();
 

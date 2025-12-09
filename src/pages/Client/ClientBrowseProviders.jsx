@@ -10,6 +10,8 @@ import {
   payForDirectJob,
 } from "../../api/directJobs";
 import PaymentModal from "../../components/PaymentModal";
+import ReportUserModal from "../../components/ReportUserModal";
+import { createReport } from "../../api/reports";
 
 const skillOptions = [
   { value: "", label: "All occupations" },
@@ -45,6 +47,7 @@ export default function ClientBrowseProviders() {
   const [inviteTarget, setInviteTarget] = useState(null);
   const [inviteForm, setInviteForm] = useState(inviteInitialState);
   const [paymentJob, setPaymentJob] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -92,6 +95,15 @@ export default function ClientBrowseProviders() {
     },
     onError: (error) => {
       alert(error.response?.data?.message || "Payment failed.");
+    },
+  });
+
+  const reportMutation = useMutation({
+    mutationFn: createReport,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      setReportTarget(null);
+      alert("Report submitted successfully.");
     },
   });
 
@@ -321,6 +333,11 @@ export default function ClientBrowseProviders() {
                   })
                 }
                 onPay={() => setPaymentJob(job)}
+                onReport={() => setReportTarget({
+                  jobId: job._id,
+                  providerId: job.provider?._id,
+                  providerName: job.provider?.name,
+                })}
                 isCancelling={cancelMutation.isPending}
                 showCancel
               />
@@ -336,6 +353,11 @@ export default function ClientBrowseProviders() {
                 key={job._id} 
                 job={job} 
                 onPay={() => setPaymentJob(job)}
+                onReport={() => setReportTarget({
+                  jobId: job._id,
+                  providerId: job.provider?._id,
+                  providerName: job.provider?.name,
+                })}
               />
             ))}
           </div>
@@ -364,11 +386,31 @@ export default function ClientBrowseProviders() {
         onPay={(job) => payMutation.mutate({ directJobId: job.id || job._id, amount: job.budget })}
         isProcessing={payMutation.isPending}
       />
+
+      <ReportUserModal
+        isOpen={Boolean(reportTarget)}
+        onClose={() => {
+          if (reportMutation.isPending) return;
+          setReportTarget(null);
+        }}
+        reportedUser={{
+          id: reportTarget?.providerId,
+          name: reportTarget?.providerName,
+        }}
+        onSubmit={(data) => {
+          reportMutation.mutate({
+            ...data,
+            reportedUser: reportTarget?.providerId,
+            jobId: reportTarget?.jobId,
+          });
+        }}
+        isSubmitting={reportMutation.isPending}
+      />
     </div>
   );
 }
 
-function DirectJobCard({ job, onMessage, onCancel, onPay, showCancel, isCancelling }) {
+function DirectJobCard({ job, onMessage, onCancel, onPay, onReport, showCancel, isCancelling }) {
   return (
     <div className="p-4 rounded-2xl border border-gray-200 bg-white flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -444,6 +486,15 @@ function DirectJobCard({ job, onMessage, onCancel, onPay, showCancel, isCancelli
             className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-red-600 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
           >
             {isCancelling ? "Cancelling..." : "Cancel invite"}
+          </button>
+        ) : null}
+        {job.status === "completed" && onReport ? (
+          <button
+            type="button"
+            onClick={onReport}
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-red-500 hover:text-white transition-colors"
+          >
+            Report
           </button>
         ) : null}
       </div>
@@ -526,32 +577,18 @@ function InviteProviderModal({
               className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-y"
             />
           </label>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-gray-700">
-                Location
-              </span>
-              <input
-                name="location"
-                value={formData.location}
-                onChange={onChange}
-                placeholder="e.g., Dhanmondi, Dhaka"
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-gray-700">
-                Preferred date
-              </span>
-              <input
-                type="date"
-                name="preferredDate"
-                value={formData.preferredDate}
-                onChange={onChange}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-              />
-            </label>
-          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-gray-700">
+              Preferred date
+            </span>
+            <input
+              type="date"
+              name="preferredDate"
+              value={formData.preferredDate}
+              onChange={onChange}
+              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+            />
+          </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-semibold text-gray-700">
               Notes (optional)
@@ -589,4 +626,5 @@ function InviteProviderModal({
     </div>
   );
 }
+
 

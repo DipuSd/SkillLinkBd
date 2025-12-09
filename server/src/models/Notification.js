@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * Notification Model Schema
+ * 
+ * Represents system notifications sent to users.
+ * Tracks notification type, read status, and optional metadata.
+ */
 const notificationSchema = new mongoose.Schema(
   {
     recipient: {
@@ -46,6 +52,7 @@ const notificationSchema = new mongoose.Schema(
   }
 );
 
+// Database index for efficient queries by recipient and date
 notificationSchema.index({ recipient: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Notification", notificationSchema);

@@ -1,3 +1,10 @@
+/**
+ * Job Controller
+ * 
+ * Manages job postings, applications, assignments, and payments.
+ * Handles the entire lifecycle of a job from creation to completion.
+ */
+
 const createError = require("http-errors");
 const mongoose = require("mongoose");
 const Job = require("../models/Job");
@@ -6,6 +13,12 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { notifyUser } = require("../services/notificationService");
 
+/**
+ * Helper function to build MongoDB query filters based on request query parameters.
+ * 
+ * @param {Object} query - Express request query object
+ * @returns {Object} MongoDB filter object
+ */
 const buildJobFilters = (query = {}) => {
   const filters = {};
   if (query.status) {
@@ -23,6 +36,12 @@ const buildJobFilters = (query = {}) => {
   return filters;
 };
 
+/**
+ * Create a new job posting
+ * 
+ * @route POST /api/jobs
+ * @access Private (Client only)
+ */
 exports.createJob = asyncHandler(async (req, res) => {
   if (req.user.role !== "client") {
     throw createError(403, "Only clients can create jobs");
@@ -43,6 +62,15 @@ exports.createJob = asyncHandler(async (req, res) => {
   res.status(201).json({ job });
 });
 
+/**
+ * Get all jobs with filtering and pagination
+ * 
+ * Supports filtering by status, skill, budget, and search text.
+ * Providers only see open jobs they haven't applied to (unless specified).
+ * 
+ * @route GET /api/jobs
+ * @access Private
+ */
 exports.getJobs = asyncHandler(async (req, res) => {
   const filters = buildJobFilters(req.query);
 
@@ -95,6 +123,12 @@ exports.getJobs = asyncHandler(async (req, res) => {
   res.json({ jobs: validJobs });
 });
 
+/**
+ * Get job details by ID
+ * 
+ * @route GET /api/jobs/:id
+ * @access Private
+ */
 exports.getJobById = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id)
     .populate({ path: "client", select: "name email location" })
@@ -107,6 +141,12 @@ exports.getJobById = asyncHandler(async (req, res) => {
   res.json({ job });
 });
 
+/**
+ * Update a job posting
+ * 
+ * @route PUT /api/jobs/:id
+ * @access Private (Job owner or Admin)
+ */
 exports.updateJob = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id);
 
@@ -142,6 +182,14 @@ exports.updateJob = asyncHandler(async (req, res) => {
   res.json({ job });
 });
 
+/**
+ * Delete a job posting
+ * 
+ * Removes the job and all associated applications.
+ * 
+ * @route DELETE /api/jobs/:id
+ * @access Private (Job owner or Admin)
+ */
 exports.deleteJob = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id);
 
@@ -162,6 +210,12 @@ exports.deleteJob = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
+/**
+ * Get jobs posted by the current client
+ * 
+ * @route GET /api/jobs/client/posted
+ * @access Private (Client only)
+ */
 exports.getClientJobs = asyncHandler(async (req, res) => {
   if (req.user.role !== "client") {
     throw createError(403, "Only clients can access their jobs");
@@ -179,6 +233,16 @@ exports.getClientJobs = asyncHandler(async (req, res) => {
   res.json({ jobs });
 });
 
+/**
+ * Update job status
+ * 
+ * Handles status transitions (e.g., to 'completed').
+ * Updates stats for clients and providers upon completion.
+ * Cleans up chat conversations for completed jobs.
+ * 
+ * @route PATCH /api/jobs/:id/status
+ * @access Private (Job owner or Admin)
+ */
 exports.updateJobStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -238,6 +302,16 @@ exports.updateJobStatus = asyncHandler(async (req, res) => {
   res.json({ job });
 });
 
+/**
+ * Assign a provider to a job
+ * 
+ * Sets the job status to 'in-progress' and the application status to 'hired'.
+ * Rejects other applications for the same job.
+ * Notifies the selected provider.
+ * 
+ * @route POST /api/jobs/:id/assign
+ * @access Private (Job owner or Admin)
+ */
 exports.assignJobProvider = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { providerId } = req.body;
@@ -299,6 +373,14 @@ exports.assignJobProvider = asyncHandler(async (req, res) => {
   res.json({ job });
 });
 
+/**
+ * Get recommended jobs for a provider
+ * 
+ * Based on provider's skills and excluding jobs they've already applied to.
+ * 
+ * @route GET /api/jobs/recommended
+ * @access Private (Provider only)
+ */
 exports.getRecommendedJobs = asyncHandler(async (req, res) => {
   if (req.user.role !== "provider") {
     return res.json({ jobs: [] });
@@ -328,6 +410,16 @@ exports.getRecommendedJobs = asyncHandler(async (req, res) => {
   res.json({ jobs: validJobs });
 });
 
+/**
+ * Process payment for a job
+ * 
+ * Simulates a payment transaction.
+ * Updates payment status, amounts, and user financial stats.
+ * Notifies the provider of received payment.
+ * 
+ * @route POST /api/jobs/:id/pay
+ * @access Private (Job owner or Admin)
+ */
 exports.processPayment = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { amount } = req.body;

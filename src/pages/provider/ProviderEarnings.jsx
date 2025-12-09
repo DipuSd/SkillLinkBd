@@ -19,6 +19,9 @@ import { getProviderEarnings } from "../../api/dashboard";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
+// Ensure autoTable is available on jsPDF
+// The side-effect import above adds autoTable to jsPDF.prototype
+
 export default function ProviderEarnings() {
   const { data, isLoading } = useQuery({
     queryKey: ["provider-earnings"],
@@ -54,79 +57,92 @@ export default function ProviderEarnings() {
   ];
 
   const handleExportPDF = () => {
-    const doc = new jsPDF();
-    const currentDate = new Date().toLocaleDateString();
-    
-    // Add title
-    doc.setFontSize(20);
-    doc.setTextColor(40);
-    doc.text("Earnings Report", 14, 22);
-    
-    // Add date
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated on: ${currentDate}`, 14, 30);
-    
-    // Add metrics section
-    doc.setFontSize(14);
-    doc.setTextColor(40);
-    doc.text("Summary", 14, 42);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(60);
-    doc.text(`Total Earnings: ৳${metrics.totalEarnings ?? 0}`, 14, 50);
-    doc.text(`This Month: ৳${metrics.thisMonth ?? 0}`, 14, 56);
-    doc.text(`Average Rating: ${metrics.averageRating ?? 0}`, 14, 62);
-    doc.text(`Jobs Completed: ${metrics.jobsCompleted ?? 0}`, 14, 68);
-    
-    // Add monthly earnings table
-    if (chartData.length > 0) {
+    try {
+      const doc = new jsPDF();
+      const currentDate = new Date().toLocaleDateString();
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setTextColor(40);
+      doc.text("Earnings Report", 14, 22);
+      
+      // Add date
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${currentDate}`, 14, 30);
+      
+      // Add metrics section
       doc.setFontSize(14);
       doc.setTextColor(40);
-      doc.text("Monthly Earnings", 14, 80);
+      doc.text("Summary", 14, 42);
       
-      const monthlyData = chartData.map(item => [
-        item.name,
-        `৳${item.earnings}`
-      ]);
+      doc.setFontSize(10);
+      doc.setTextColor(60);
+      doc.text(`Total Earnings: ৳${metrics.totalEarnings ?? 0}`, 14, 50);
+      doc.text(`This Month: ৳${metrics.thisMonth ?? 0}`, 14, 56);
+      doc.text(`Average Rating: ${metrics.averageRating ?? 0}`, 14, 62);
+      doc.text(`Jobs Completed: ${metrics.jobsCompleted ?? 0}`, 14, 68);
       
-      doc.autoTable({
-        startY: 85,
-        head: [['Month', 'Earnings']],
-        body: monthlyData,
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
-      });
+      // Add monthly earnings table
+      if (chartData.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(40);
+        doc.text("Monthly Earnings", 14, 80);
+        
+        const monthlyData = chartData.map(item => [
+          item.name,
+          `৳${item.earnings}`
+        ]);
+        
+        // Check if autoTable is available
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable({
+            startY: 85,
+            head: [['Month', 'Earnings']],
+            body: monthlyData,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+          });
+        } else {
+          console.error('autoTable is not available on jsPDF instance');
+        }
+      }
+      
+      // Add recent jobs table
+      if (recentJobs.length > 0) {
+        const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 100;
+        
+        doc.setFontSize(14);
+        doc.setTextColor(40);
+        doc.text("Recent Jobs", 14, finalY);
+        
+        const jobsData = recentJobs.map(item => [
+          item.job,
+          item.client,
+          item.date ? new Date(item.date).toLocaleDateString() : 'N/A',
+          `৳${item.payment ?? 0}`,
+          item.rating ?? 'N/A'
+        ]);
+        
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable({
+            startY: finalY + 5,
+            head: [['Job', 'Client', 'Date', 'Payment', 'Rating']],
+            body: jobsData,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+          });
+        }
+      }
+      
+      // Save the PDF
+      const filename = `earnings_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      console.log('PDF generated successfully:', filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF report. Please try again.');
     }
-    
-    // Add recent jobs table
-    if (recentJobs.length > 0) {
-      const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 100;
-      
-      doc.setFontSize(14);
-      doc.setTextColor(40);
-      doc.text("Recent Jobs", 14, finalY);
-      
-      const jobsData = recentJobs.map(item => [
-        item.job,
-        item.client,
-        item.date ? new Date(item.date).toLocaleDateString() : 'N/A',
-        `৳${item.payment ?? 0}`,
-        item.rating ?? 'N/A'
-      ]);
-      
-      doc.autoTable({
-        startY: finalY + 5,
-        head: [['Job', 'Client', 'Date', 'Payment', 'Rating']],
-        body: jobsData,
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
-      });
-    }
-    
-    // Save the PDF
-    const filename = `earnings_report_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(filename);
   };
 
   return (
@@ -254,3 +270,4 @@ export default function ProviderEarnings() {
     </>
   );
 }
+

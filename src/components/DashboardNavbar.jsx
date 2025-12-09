@@ -13,6 +13,16 @@ const socketUrl =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:4000";
 
+/**
+ * DashboardNavbar Component
+ * 
+ * Top navigation bar for authenticated dashboard pages.
+ * - Displays user profile and logout.
+ * - Handles real-time notification badge updates via Socket.IO.
+ * - Provides links to Chat and Notifications.
+ * 
+ * @param {string} [notificationLink="/notifications"] - Custom link for notifications page
+ */
 function DashboardNavbar({ notificationLink = "/notifications" }) {
   const { user, logout, token } = useAuth();
   const location = useLocation();

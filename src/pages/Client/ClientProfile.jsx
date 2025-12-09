@@ -84,9 +84,9 @@ export default function ClientProfile() {
 
   return (
     <div className="py-2 overflow-y-auto md:px-6 lg:px-20 mt-2 space-y-10">
-      <div className="flex flex-col lg:flex-row items-center lg:justify-between space-y-5 rounded-xl p-4 bg-gradient-to-r from-blue-400 to-emerald-500">
-        <div className="flex flex-col lg:flex-row md:items-center md:space-y-4 lg:space-y-0 lg:space-x-5 w-full">
-          <div className="relative w-fit mx-auto lg:mx-0">
+      <div className="flex flex-col lg:flex-row items-center lg:items-start lg:justify-between gap-5 rounded-xl p-6 bg-gradient-to-r from-blue-400 to-emerald-500">
+        <div className="flex flex-col lg:flex-row items-center lg:items-center gap-5 w-full">
+          <div className="relative flex-shrink-0">
             <div className="rounded-full border-4 border-white shadow-md overflow-hidden h-28 w-28">
               <img
                 src={form.avatarUrl || "/sampleProfile.png"}
@@ -95,7 +95,7 @@ export default function ClientProfile() {
               />
             </div>
             {isEditing ? (
-              <label className="absolute top-20 -right-1 p-2 rounded-full bg-white cursor-pointer text-blue-500 font-semibold hover:bg-blue-500 hover:text-white shadow-md">
+              <label className="absolute bottom-0 right-0 p-2 rounded-full bg-white cursor-pointer text-blue-500 font-semibold hover:bg-blue-500 hover:text-white shadow-md transition-colors">
                 <FiUpload size={18} />
                 <input
                   type="file"
@@ -119,7 +119,7 @@ export default function ClientProfile() {
               </label>
             ) : null}
           </div>
-          <div className="flex flex-col items-center lg:items-start text-white space-y-2 w-full">
+          <div className="flex flex-col items-center lg:items-start text-white space-y-2 flex-1">
             <h1 className="text-2xl font-semibold">{user?.name}</h1>
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-sm font-semibold">
               {user?.location ? (
@@ -130,20 +130,20 @@ export default function ClientProfile() {
               ) : null}
             </div>
             {user?.bio ? (
-              <p className="text-white/80 text-center lg:text-left">
+              <p className="text-white/90 text-center lg:text-left max-w-2xl">
                 {user.bio}
               </p>
             ) : null}
           </div>
         </div>
-        <div>
+        <div className="flex-shrink-0">
           <button
             type="button"
             onClick={() => {
               setIsEditing((prev) => !prev);
               setStatusMessage("");
             }}
-            className="rounded-lg bg-white py-2 px-4 flex items-center justify-center space-x-2 text-sm font-semibold text-blue-500 hover:opacity-80 cursor-pointer shadow-md"
+            className="rounded-lg bg-white py-2 px-4 flex items-center justify-center gap-2 text-sm font-semibold text-blue-500 hover:opacity-80 cursor-pointer shadow-md transition-opacity"
           >
             <FaRegEdit size={18} />
             <span>{isEditing ? "Cancel" : "Edit Profile"}</span>

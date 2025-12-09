@@ -2,6 +2,17 @@ import { Outlet } from "react-router-dom";
 import DashboardNavbar from "../components/DashboardNavbar";
 import DashboardSidebar from "../components/DashboardSidebar";
 
+/**
+ * DashboardLayout Component
+ * 
+ * The main wrapper for all dashboard pages.
+ * - Renders the side navigation (`DashboardSidebar`).
+ * - Renders the top navigation (`DashboardNavbar`).
+ * - Renders the active page content via `Outlet`.
+ * 
+ * @param {Object[]} menuItems - List of navigation items for the sidebar
+ * @param {string} notificationLink - URL for the notifications page
+ */
 function DashboardLayout({ menuItems, notificationLink }) {
   return (
     <div className="min-h-screen bg-gray-50">

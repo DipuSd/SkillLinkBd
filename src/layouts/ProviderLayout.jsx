@@ -52,6 +52,12 @@ const providerMenu = [
   },
 ];
 
+/**
+ * ProviderLayout Component
+ * 
+ * Defines the dashboard structure for Provider users.
+ * Configures the side menu with Provider-specific links (Jobs, Applications, Earnings, etc.).
+ */
 function ProviderLayout() {
   return (
     <DashboardLayout

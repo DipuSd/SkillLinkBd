@@ -24,6 +24,17 @@ const iconMap = {
   },
 };
 
+/**
+ * NotificationCards Component
+ * 
+ * Displays a list of notification items with type-based styling.
+ * 
+ * @param {Object[]} items - List of notification objects
+ * @param {Function} onMarkRead - Callback to mark notification as read
+ * @param {Function} onDelete - Callback to delete notification
+ * @param {boolean} [showActions=true] - Show action buttons
+ * @param {string} [emptyMessage] - Message to show when list is empty
+ */
 export default function NotificationCards({
   items = [],
   onMarkRead,

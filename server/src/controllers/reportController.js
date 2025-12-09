@@ -1,9 +1,22 @@
+/**
+ * Report Controller
+ * 
+ * Handles creation and management of user reports.
+ * Allows admins to view, update, and resolve reports (including banning users).
+ */
+
 const createError = require("http-errors");
 const Report = require("../models/Report");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { notifyUser } = require("../services/notificationService");
 
+/**
+ * Create a new report against a user
+ * 
+ * @route POST /api/reports
+ * @access Private
+ */
 exports.createReport = asyncHandler(async (req, res) => {
   const { reportedUserId, reason, description, evidenceUrl, jobId, directJobId } = req.body;
 
@@ -37,6 +50,14 @@ exports.createReport = asyncHandler(async (req, res) => {
   res.status(201).json({ report });
 });
 
+/**
+ * Get reports with filtering
+ * 
+ * Admins can view all reports, users can view their own filed reports.
+ * 
+ * @route GET /api/reports
+ * @access Private
+ */
 exports.getReports = asyncHandler(async (req, res) => {
   const { status, scope } = req.query;
 
@@ -66,6 +87,15 @@ exports.getReports = asyncHandler(async (req, res) => {
   res.json({ reports });
 });
 
+/**
+ * Update report status (Admin only)
+ * 
+ * Handles resolution, rejection, and punitive actions (warn, suspend, ban).
+ * Notifies reporter and reported user (if warned) of the outcome.
+ * 
+ * @route PATCH /api/reports/:id
+ * @access Private (Admin)
+ */
 exports.updateReport = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status, actionTaken, warningMessage } = req.body;

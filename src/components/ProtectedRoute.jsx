@@ -1,6 +1,15 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+/**
+ * ProtectedRoute Component
+ * 
+ * Guard component that restricts access based on authentication and roles.
+ * Redirects unauthenticated users to login.
+ * Redirects unauthorized users to their respective dashboards.
+ * 
+ * @param {string[]} roles - Array of allowed roles for the route
+ */
 function ProtectedRoute({ roles }) {
   const location = useLocation();
   const { isAuthenticated, isBooting, user } = useAuth();

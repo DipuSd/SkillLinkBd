@@ -1,8 +1,15 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
+/**
+ * User Model Schema
+ * 
+ * Represents all users in the system (clients, providers, and admins).
+ * Stores user authentication, profile information, and statistics.
+ */
 const userSchema = new mongoose.Schema(
   {
+    // Basic Information
     name: {
       type: String,
       required: [true, "Name is required"],
@@ -18,7 +25,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      select: false,
+      select: false, // Don't include password in query results by default
       minlength: 6,
     },
     role: {
@@ -27,6 +34,8 @@ const userSchema = new mongoose.Schema(
       default: "client",
       index: true,
     },
+    
+    // Location Information
     location: {
       type: String,
       trim: true,
@@ -43,6 +52,8 @@ const userSchema = new mongoose.Schema(
         max: 180,
       },
     },
+    
+    // Profile Information (mainly for providers)
     skills: {
       type: [String],
       default: [],
@@ -65,6 +76,8 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    
+    // Rating and Statistics
     rating: {
       type: Number,
       default: 0,
@@ -89,6 +102,8 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    
+    // Account Status
     status: {
       type: String,
       enum: ["active", "banned"],
@@ -103,22 +118,30 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true,
+    timestamps: true, // Adds createdAt and updatedAt fields
     toJSON: {
+      // Transform the document when converting to JSON
       transform(doc, ret) {
         ret.id = ret._id.toString();
         ret._id = ret._id.toString();
         delete ret.__v;
-        delete ret.password;
+        delete ret.password; // Never expose password in JSON
         return ret;
       },
     },
   }
 );
 
+// Database Indexes for optimized queries
 userSchema.index({ role: 1, status: 1 });
 userSchema.index({ skills: 1 });
 
+/**
+ * Pre-save Hook: Hash Password
+ * 
+ * Automatically hashes the password before saving to database.
+ * Only runs if password field is modified.
+ */
 userSchema.pre("save", async function hashPassword(next) {
   if (!this.isModified("password")) {
     return next();
@@ -129,6 +152,14 @@ userSchema.pre("save", async function hashPassword(next) {
   next();
 });
 
+/**
+ * Instance Method: Match Password
+ * 
+ * Compares a candidate password with the stored hashed password.
+ * 
+ * @param {string} candidate - The password to check
+ * @returns {Promise<boolean>} True if passwords match
+ */
 userSchema.methods.matchPassword = async function matchPassword(candidate) {
   if (!this.password) return false;
   return bcrypt.compare(candidate, this.password);

@@ -1,3 +1,10 @@
+/**
+ * User Controller
+ * 
+ * Handles user profile management, user listing, and provider search.
+ * Includes admin functions for user management.
+ */
+
 const createError = require("http-errors");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
@@ -14,6 +21,10 @@ const editableFields = [
   "avatarUrl",
 ];
 
+/**
+ * Formats provider data for public/list display.
+ * Strips sensitive or unnecessary fields.
+ */
 const formatProviderSummary = (provider) => ({
   _id: provider.id,
   name: provider.name,
@@ -28,6 +39,14 @@ const formatProviderSummary = (provider) => ({
   avatarUrl: provider.avatarUrl,
 });
 
+/**
+ * Update current user's profile
+ * 
+ * Updates allowed fields for the authenticated user.
+ * 
+ * @route PUT /api/users/me
+ * @access Private
+ */
 exports.updateMe = asyncHandler(async (req, res) => {
   const updates = {};
 
@@ -49,6 +68,12 @@ exports.updateMe = asyncHandler(async (req, res) => {
   res.json({ user: user.toJSON() });
 });
 
+/**
+ * List all users (Admin only)
+ * 
+ * @route GET /api/users
+ * @access Private (Admin)
+ */
 exports.listUsers = asyncHandler(async (req, res) => {
   const { role, search } = req.query;
 
@@ -71,6 +96,14 @@ exports.listUsers = asyncHandler(async (req, res) => {
   res.json({ users });
 });
 
+/**
+ * Get user profile by ID
+ * 
+ * Enforces role-based visibility rules (e.g., Clients see Providers).
+ * 
+ * @route GET /api/users/:id
+ * @access Private
+ */
 exports.getUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -93,6 +126,12 @@ exports.getUserById = asyncHandler(async (req, res) => {
   res.json({ user: user.toJSON() });
 });
 
+/**
+ * Update user status (Ban/Suspend/Activate)
+ * 
+ * @route PATCH /api/users/:id/status
+ * @access Private (Admin only)
+ */
 exports.updateUserStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -126,6 +165,16 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
+/**
+ * Search and filter providers
+ * 
+ * Supports search by name/skill, filtering by rating, rate, experience.
+ * Sorts by rating, newness, etc.
+ * Filters by location distance if user coordinates available (within 20km).
+ * 
+ * @route GET /api/users/providers/search
+ * @access Private
+ */
 exports.searchProviders = asyncHandler(async (req, res) => {
   const {
     search,
@@ -211,6 +260,12 @@ exports.searchProviders = asyncHandler(async (req, res) => {
   res.json({ providers: providers.map(formatProviderSummary) });
 });
 
+/**
+ * Delete a user account
+ * 
+ * @route DELETE /api/users/:id
+ * @access Private (Admin only)
+ */
 exports.deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) {

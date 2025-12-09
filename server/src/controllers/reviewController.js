@@ -1,9 +1,25 @@
+/**
+ * Review Controller
+ * 
+ * Handles creation and retrieval of job reviews.
+ * Updates user ratings upon review creation.
+ */
+
 const createError = require("http-errors");
 const Review = require("../models/Review");
 const Job = require("../models/Job");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 
+/**
+ * Create a new review
+ * 
+ * Validates the review (job must be completed, user must be participant).
+ * Updates the target user's aggregate rating.
+ * 
+ * @route POST /api/reviews
+ * @access Private
+ */
 exports.createReview = asyncHandler(async (req, res) => {
   const { jobId, rating, comment } = req.body;
 
@@ -68,6 +84,12 @@ exports.createReview = asyncHandler(async (req, res) => {
   res.status(201).json({ review });
 });
 
+/**
+ * Get reviews for a provider
+ * 
+ * @route GET /api/reviews/provider/:providerId
+ * @access Private
+ */
 exports.getProviderReviews = asyncHandler(async (req, res) => {
   const reviews = await Review.find({
     provider: req.params.providerId,

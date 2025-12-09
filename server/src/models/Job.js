@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * Job Model Schema
+ * 
+ * Represents job postings created by clients.
+ * Tracks job details, status, assigned provider, and payment information.
+ */
 const jobSchema = new mongoose.Schema(
   {
     client: {
@@ -66,7 +72,7 @@ const jobSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true,
+    timestamps: true, // Adds createdAt and updatedAt
     toJSON: {
       transform(doc, ret) {
         ret.id = ret._id.toString();
@@ -78,8 +84,9 @@ const jobSchema = new mongoose.Schema(
   }
 );
 
+// Database indexes for optimized queries
 jobSchema.index({ client: 1, status: 1 });
 jobSchema.index({ assignedProvider: 1, status: 1 });
-jobSchema.index({ title: "text", description: "text" });
+jobSchema.index({ title: "text", description: "text" }); // Full-text search
 
 module.exports = mongoose.model("Job", jobSchema);

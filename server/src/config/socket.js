@@ -1,8 +1,18 @@
 const jwt = require("jsonwebtoken");
 
+/**
+ * Configure Socket.IO
+ * 
+ * Sets up authentication middleware, connection handling, and event listeners.
+ * Provides helper methods to emit events to specific users or conversations.
+ * 
+ * @param {Object} io - Socket.IO server instance
+ * @returns {Object} Helper methods { emitToUser, emitToConversation }
+ */
 function configureSocket(io) {
   const onlineUsers = new Map();
 
+  // Middleware: Authenticate Socket connections using JWT
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
 

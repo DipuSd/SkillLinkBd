@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * Conversation Model Schema
+ * 
+ * Represents a chat conversation between two users.
+ * Tracks participants, related job, and unread message counts.
+ */
 const conversationSchema = new mongoose.Schema(
   {
     participants: [
@@ -36,7 +42,8 @@ const conversationSchema = new mongoose.Schema(
   }
 );
 
+// Database indexes for optimized queries
 conversationSchema.index({ participants: 1 });
-conversationSchema.index({ updatedAt: -1 });
+conversationSchema.index({ updatedAt: -1 }); // Sort by most recent
 
 module.exports = mongoose.model("Conversation", conversationSchema);

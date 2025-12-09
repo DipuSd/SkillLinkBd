@@ -1,7 +1,16 @@
 const mongoose = require("mongoose");
 
+// Track connection state to prevent duplicate connections
 let isConnected = false;
 
+/**
+ * Database Connection Function
+ * 
+ * Establishes connection to MongoDB using the MONGODB_URI environment variable.
+ * Implements connection state tracking to prevent duplicate connections.
+ * 
+ * @throws {Error} If MONGODB_URI is not set or connection fails
+ */
 async function connectDB() {
   // Reset connection state if disconnected
   if (mongoose.connection.readyState === 0) {

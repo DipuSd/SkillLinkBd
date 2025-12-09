@@ -7,6 +7,13 @@ const typeColours = {
   warning: "bg-orange-400",
 };
 
+/**
+ * ProviderRecentNotification Component
+ * 
+ * Simplified list of recent notifications for the provider dashboard.
+ * 
+ * @param {Object[]} items - List of notification items
+ */
 export default function ProviderRecentNotification({ items = [] }) {
   if (!items.length) {
     return <p className="text-gray-400 text-sm">No notifications yet.</p>;

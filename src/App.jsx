@@ -29,6 +29,14 @@ import AdminLayout from "./layouts/AdminLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
+/**
+ * App Component
+ * 
+ * Main application component.
+ * - Wraps the app in AuthProvider.
+ * - Defines all application routes (public, protected, and role-based).
+ * - Maps paths to page components.
+ */
 function App() {
   return (
     <AuthProvider>

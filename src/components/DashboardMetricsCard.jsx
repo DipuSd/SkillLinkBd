@@ -1,3 +1,12 @@
+/**
+ * DashboardMetricsCard Component
+ * 
+ * Displays a grid of metric cards for dashboard statistics.
+ * Handles loading state with skeleton loaders.
+ * 
+ * @param {Object[]} items - List of metric items {label, count, icon}
+ * @param {boolean} [loading=false] - Show skeleton loading state
+ */
 function DashboardMetricsCard({ items = [], loading = false }) {
   const skeletons = Array.from({ length: Math.max(items.length, 4) });
 

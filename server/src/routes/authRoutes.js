@@ -6,6 +6,18 @@ const { authenticate } = require("../middleware/auth");
 
 const router = express.Router();
 
+/**
+ * @route   POST /api/auth/register
+ * @desc    Register a new user account.
+ * @access  Public
+ * 
+ * Validation:
+ * - name: Required, minimum 2 characters
+ * - email: Required, valid email format
+ * - password: Required, minimum 6 characters
+ * - role: Optional, must be 'client', 'provider', or 'admin'
+ * - location: Optional
+ */
 router.post(
   "/register",
   [
@@ -37,6 +49,11 @@ router.post(
   register
 );
 
+/**
+ * @route   POST /api/auth/login
+ * @desc    Authenticate user and return JWT token.
+ * @access  Public
+ */
 router.post(
   "/login",
   [
@@ -47,6 +64,11 @@ router.post(
   login
 );
 
+/**
+ * @route   GET /api/auth/profile
+ * @desc    Get the authenticated user's profile.
+ * @access  Private
+ */
 router.get("/profile", authenticate, getProfile);
 
 module.exports = router;

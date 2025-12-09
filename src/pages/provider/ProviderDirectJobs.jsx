@@ -293,6 +293,9 @@ export default function ProviderDirectJobs() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -343,6 +346,24 @@ export default function ProviderDirectJobs() {
                       <div className="text-sm text-gray-600">
                         {job.updatedAt ? new Date(job.updatedAt).toLocaleDateString() : "N/A"}
                       </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-right">
+                      {job.status === "completed" ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setReportTarget({
+                              jobId: job._id,
+                              clientId: job.client?._id,
+                              clientName: job.client?.name,
+                              title: job.title,
+                            })
+                          }
+                          className="px-3 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-red-500 hover:text-white transition-colors font-semibold"
+                        >
+                          Report
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

@@ -1,9 +1,22 @@
+/**
+ * Direct Job Controller
+ * 
+ * Manages direct job invitations between clients and providers.
+ * Handles creation, status updates (accept/decline), and payments for direct jobs.
+ */
+
 const createError = require("http-errors");
 const DirectJob = require("../models/DirectJob");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { notifyUser } = require("../services/notificationService");
 
+/**
+ * Send a direct job invitation
+ * 
+ * @route POST /api/direct-jobs
+ * @access Private (Client only)
+ */
 exports.createDirectJob = asyncHandler(async (req, res) => {
   if (req.user.role !== "client") {
     throw createError(403, "Only clients can send direct job invitations");
@@ -48,6 +61,14 @@ exports.createDirectJob = asyncHandler(async (req, res) => {
   res.status(201).json({ directJob });
 });
 
+/**
+ * List direct jobs
+ * 
+ * Scoped by role: providers get received invites, clients get sent invites.
+ * 
+ * @route GET /api/direct-jobs
+ * @access Private
+ */
 exports.listDirectJobs = asyncHandler(async (req, res) => {
   const scope = req.query.scope || (req.user.role === "provider" ? "provider" : "client");
   const { status } = req.query;
@@ -79,6 +100,15 @@ exports.listDirectJobs = asyncHandler(async (req, res) => {
   res.json({ directJobs });
 });
 
+/**
+ * Update direct job status
+ * 
+ * Providers can accept, decline, or mark as completed.
+ * Clients can cancel invites.
+ * 
+ * @route PATCH /api/direct-jobs/:id/status
+ * @access Private (Related Client/Provider)
+ */
 exports.updateDirectJobStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { action } = req.body;
@@ -153,6 +183,12 @@ exports.updateDirectJobStatus = asyncHandler(async (req, res) => {
   res.json({ directJob });
 });
 
+/**
+ * Process payment for a direct job
+ * 
+ * @route POST /api/direct-jobs/:id/pay
+ * @access Private (Client)
+ */
 exports.processDirectJobPayment = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { amount } = req.body;

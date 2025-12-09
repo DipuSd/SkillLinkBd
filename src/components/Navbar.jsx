@@ -2,6 +2,12 @@ import { Link } from "react-router-dom";
 import { FaBoltLightning } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 
+/**
+ * Navbar Component
+ * 
+ * Public top navigation bar.
+ * Adapts based on authentication state (Login/Signup vs Dashboard link).
+ */
 function Navbar() {
   const { isAuthenticated, user } = useAuth();
 

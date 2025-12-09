@@ -14,6 +14,14 @@ L.Icon.Default.mergeOptions({
 // Default center for Bangladesh (Dhaka)
 const DEFAULT_CENTER = { lat: 23.8103, lng: 90.4125 };
 
+/**
+ * LocationMarker Component
+ * 
+ * Helper component to handle map clicks and marker placement.
+ * 
+ * @param {Object} position - Current marker position {lat, lng}
+ * @param {Function} onLocationSelect - Callback when location is selected
+ */
 function LocationMarker({ position, onLocationSelect }) {
   useMapEvents({
     click(e) {
@@ -24,6 +32,17 @@ function LocationMarker({ position, onLocationSelect }) {
   return position ? <Marker position={[position.lat, position.lng]} /> : null;
 }
 
+/**
+ * LocationPicker Component
+ * 
+ * Map interface for selecting a location.
+ * Uses OpenStreetMap and Leaflet.
+ * Supports reverse geocoding to get address from coordinates.
+ * 
+ * @param {Object} value - Initial location value {latitude, longitude, locationName}
+ * @param {Function} onChange - Callback with new location data
+ * @param {boolean} [required=false] - Show required asterisk
+ */
 export default function LocationPicker({ value, onChange, required = false }) {
   const [position, setPosition] = useState(value || null);
   const [address, setAddress] = useState("");

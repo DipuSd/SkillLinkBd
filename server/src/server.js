@@ -1,3 +1,10 @@
+/**
+ * Server Entry Point
+ * 
+ * Initializes the HTTP server with Socket.IO for real-time communication.
+ * Connects to MongoDB and starts listening on the configured PORT.
+ */
+
 require("dotenv").config();
 
 const http = require("http");
@@ -8,12 +15,15 @@ const configureSocket = require("./config/socket");
 
 const PORT = process.env.PORT || 4000;
 
+// Immediately Invoked Async Function to start the server
 (async () => {
   try {
+    // Step 1: Connect to MongoDB
     // eslint-disable-next-line no-console
     console.log("🔄 Connecting to MongoDB...");
     await connectDB();
 
+    // Step 2: Create HTTP server and Socket.IO instance
     const server = http.createServer(app);
     const io = new Server(server, {
       cors: {
@@ -22,9 +32,11 @@ const PORT = process.env.PORT || 4000;
       },
     });
 
+    // Step 3: Configure Socket.IO and attach to Express app
     const socketApi = configureSocket(io);
     app.set("socket", socketApi);
 
+    // Step 4: Start the HTTP server
     server.listen(PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`✅ Server listening on port ${PORT}`);
@@ -44,6 +56,7 @@ const PORT = process.env.PORT || 4000;
       process.exit(1);
     });
   } catch (error) {
+    // Handle startup errors
     // eslint-disable-next-line no-console
     console.error("❌ Failed to start server:", error.message);
     // eslint-disable-next-line no-console

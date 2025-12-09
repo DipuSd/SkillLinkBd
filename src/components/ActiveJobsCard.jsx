@@ -1,6 +1,16 @@
 import { BsPeople } from "react-icons/bs";
 import { IoMdCheckmarkCircleOutline } from "react-icons/io";
 
+/**
+ * ActiveJobsCard Component
+ * 
+ * Displays a list of active (open) or assigned jobs for a client.
+ * Allows viewing applicants for open jobs.
+ * 
+ * @param {Object[]} jobs - List of job objects to display
+ * @param {Function} onSelectApplicants - Callback when "View Applicants" is clicked
+ * @param {string} [applicantLabel="View Applicants"] - Label for the applicants button
+ */
 function ActivejobsCard({
   jobs = [],
   onSelectApplicants,

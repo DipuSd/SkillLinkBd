@@ -3,6 +3,18 @@ import { FaStar } from "react-icons/fa";
 import { FaRegStar } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 
+/**
+ * ReviewModal Component
+ * 
+ * Modal for submitting a job review (rating + comment).
+ * 
+ * @param {boolean} isOpen - Modal visibility state
+ * @param {Function} onClose - Callback to close modal
+ * @param {Object} job - Job object being reviewed
+ * @param {Function} onSubmit - Callback with review data {jobId, rating, comment}
+ * @param {boolean} isSubmitting - Loading state for submission
+ * @param {string} error - External error message to display
+ */
 export default function ReviewModal({ isOpen, onClose, job, onSubmit, isSubmitting, error: externalError }) {
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);

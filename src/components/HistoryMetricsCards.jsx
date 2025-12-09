@@ -1,3 +1,10 @@
+/**
+ * HistoryMetricsCards Component
+ * 
+ * Displays simplified key metrics for history pages.
+ * 
+ * @param {Object[]} items - List of metric items {label, count, icon}
+ */
 function HistoryMetricsCards({ items }) {
   return (
     <>

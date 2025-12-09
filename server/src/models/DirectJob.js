@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+/**
+ * DirectJob Model Schema
+ * 
+ * Represents a direct job invitation from a client to a specific provider.
+ * Unlike regular jobs, these are targeted invitations rather than open postings.
+ */
 const directJobSchema = new mongoose.Schema(
   {
     client: {
@@ -75,6 +81,7 @@ const directJobSchema = new mongoose.Schema(
   }
 );
 
+// Database indexes for optimized queries
 directJobSchema.index({ client: 1, status: 1 });
 directJobSchema.index({ provider: 1, status: 1 });
 

@@ -1,9 +1,22 @@
+/**
+ * Chat Controller
+ * 
+ * Manages messaging and conversations between users.
+ * Supports real-time updates via Socket.IO.
+ */
+
 const createError = require("http-errors");
 const mongoose = require("mongoose");
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 const asyncHandler = require("../utils/asyncHandler");
 
+/**
+ * List conversations for the current user
+ * 
+ * @route GET /api/chat/conversations
+ * @access Private
+ */
 exports.listConversations = asyncHandler(async (req, res) => {
   const conversations = await Conversation.find({
     participants: req.user.id,
@@ -18,6 +31,14 @@ exports.listConversations = asyncHandler(async (req, res) => {
   res.json({ conversations });
 });
 
+/**
+ * Get messages for a specific conversation
+ * 
+ * Marks messages as read by the current user.
+ * 
+ * @route GET /api/chat/conversations/:conversationId/messages
+ * @access Private
+ */
 exports.getMessages = asyncHandler(async (req, res) => {
   const { conversationId } = req.params;
 
@@ -45,6 +66,15 @@ exports.getMessages = asyncHandler(async (req, res) => {
   res.json({ messages });
 });
 
+/**
+ * Send a message
+ * 
+ * Emits real-time socket event 'chat:message'.
+ * Updates conversation lastMessage and unread counts.
+ * 
+ * @route POST /api/chat/conversations/:conversationId/messages
+ * @access Private
+ */
 exports.sendMessage = asyncHandler(async (req, res) => {
   const { conversationId } = req.params;
   const { body } = req.body;
@@ -94,6 +124,15 @@ exports.sendMessage = asyncHandler(async (req, res) => {
   res.status(201).json({ message: payload });
 });
 
+/**
+ * Start or get existing conversation
+ * 
+ * If a conversation exists between participants and (optionally) for a specific job, returns it.
+ * Otherwise creates a new one.
+ * 
+ * @route POST /api/chat/conversations
+ * @access Private
+ */
 exports.startConversation = asyncHandler(async (req, res) => {
   const { participantId, jobId } = req.body;
 
@@ -143,6 +182,14 @@ exports.startConversation = asyncHandler(async (req, res) => {
   res.status(201).json({ conversation });
 });
 
+/**
+ * Delete a conversation
+ * 
+ * Removes the conversation and all its messages.
+ * 
+ * @route DELETE /api/chat/conversations/:conversationId
+ * @access Private
+ */
 exports.deleteConversation = asyncHandler(async (req, res) => {
   const { conversationId } = req.params;
 

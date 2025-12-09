@@ -16,6 +16,18 @@ const statusColors = {
   withdrawn: "bg-gray-400",
 };
 
+/**
+ * ProviderApplicationCards Component
+ * 
+ * Displays applications made by a provider.
+ * Allows withdrawing, chatting, marking complete, and reporting clients.
+ * 
+ * @param {Object[]} items - List of application items
+ * @param {Function} onChat - Callback to start chat
+ * @param {Function} onWithdraw - Callback to withdraw application
+ * @param {Function} onMarkComplete - Callback to mark job as complete
+ * @param {Function} onReportClient - Callback to report the client
+ */
 export default function ProviderApplicationCards({
   items = [],
   onChat,
@@ -47,22 +59,24 @@ export default function ProviderApplicationCards({
               <h1 className="text-lg font-semibold text-gray-800">
                 {item.title}
               </h1>
-              <div
-                className={`text-white px-2 py-1 text-sm font-semibold rounded-full capitalize ${
-                  statusColors[status] ?? "bg-blue-500"
-                }`}
-              >
-                {statusLabel}
+              <div className="flex items-center gap-2">
+                <div
+                  className={`text-white px-2 py-1 text-sm font-semibold rounded-full capitalize ${
+                    statusColors[status] ?? "bg-blue-500"
+                  }`}
+                >
+                  {statusLabel}
+                </div>
+                {item.status === "completed" && item.jobStatus === "completed" && item.paymentStatus !== "paid" ? (
+                  <div className="bg-orange-100 text-orange-600 px-2 py-1 text-sm font-semibold rounded-full border border-orange-200">
+                    Unpaid
+                  </div>
+                ) : item.status === "completed" && item.jobStatus === "completed" && item.paymentStatus === "paid" ? (
+                  <div className="bg-green-100 text-green-600 px-2 py-1 text-sm font-semibold rounded-full border border-green-200">
+                    Paid
+                  </div>
+                ) : null}
               </div>
-              {item.status === "completed" && item.jobStatus === "completed" && item.paymentStatus !== "paid" ? (
-                <div className="bg-orange-100 text-orange-600 px-2 py-1 text-sm font-semibold rounded-full border border-orange-200">
-                  Unpaid
-                </div>
-              ) : item.status === "completed" && item.jobStatus === "completed" && item.paymentStatus === "paid" ? (
-                <div className="bg-green-100 text-green-600 px-2 py-1 text-sm font-semibold rounded-full border border-green-200">
-                  Paid
-                </div>
-              ) : null}
             </div>
             <p className="text-gray-500 text-sm">Client: {item.clientName}</p>
             <div className="flex flex-row items-center space-x-3 text-gray-500 text-sm">

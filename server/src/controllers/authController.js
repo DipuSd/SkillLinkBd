@@ -1,13 +1,35 @@
+/**
+ * Authentication Controller
+ * 
+ * Handles user registration, login, and profile retrieval.
+ * Manages JWT token generation and user authentication.
+ */
+
 const createError = require("http-errors");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const generateToken = require("../utils/generateToken");
 
+/**
+ * Helper function to build authentication response with token and user data.
+ * 
+ * @param {Object} user - User object
+ * @returns {Object} Response object with token and user data
+ */
 const buildAuthResponse = (user) => ({
   token: generateToken({ id: user.id, role: user.role }),
   user,
 });
 
+/**
+ * Register a new user account
+ * 
+ * Creates a new user with the provided credentials and profile information.
+ * Validates email uniqueness and MongoDB connection status.
+ * 
+ * @route POST /api/auth/register
+ * @access Public
+ */
 exports.register = asyncHandler(async (req, res) => {
   // eslint-disable-next-line no-console
   console.log("Registration request received:", {
@@ -100,6 +122,15 @@ exports.register = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * Login user
+ * 
+ * Authenticates user with email and password.
+ * Returns JWT token and user data on successful login.
+ * 
+ * @route POST /api/auth/login
+ * @access Public
+ */
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -127,6 +158,14 @@ exports.login = asyncHandler(async (req, res) => {
   res.status(200).json(buildAuthResponse(user.toJSON()));
 });
 
+/**
+ * Get authenticated user's profile
+ * 
+ * Returns the current user's profile data.
+ * 
+ * @route GET /api/auth/profile
+ * @access Private
+ */
 exports.getProfile = asyncHandler(async (req, res) => {
   res.json({ user: req.user.toJSON() });
 });

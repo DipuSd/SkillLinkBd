@@ -6,6 +6,20 @@ import { FaRegStar } from "react-icons/fa6";
 import { LuStarOff } from "react-icons/lu";
 import ReviewModal from "./ReviewModal";
 
+/**
+ * CompletedJobsCard Component
+ * 
+ * Displays completed or in-progress jobs with extensive actions:
+ * - View details, Message, Report, Remove, Pay, Write Review.
+ * 
+ * @param {Object[]} jobs - List of job objects
+ * @param {Function} onReviewSubmit - Callback when review is submitted
+ * @param {Function} onReport - Callback to report a job/user
+ * @param {Function} onDelete - Callback to delete/remove a job
+ * @param {Function} onViewDetails - Callback to view details
+ * @param {Function} onMessage - Callback to start messaging
+ * @param {Function} onPay - Callback to initiate payment
+ */
 export default function CompletedJobsCard({ jobs, onReviewSubmit, onReport, onDelete, onViewDetails, onMessage, onPay }) {
   const [selectedJob, setSelectedJob] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -15,6 +29,7 @@ export default function CompletedJobsCard({ jobs, onReviewSubmit, onReport, onDe
     <>
       {jobs.map((job) => (
         <div
+          key={job.id}
           className={`rounded-2xl hover:shadow-lg transition-all duration-200 p-6 space-y-4 h-fit ${
             job.reviewed == null || job.reviewed
               ? "border border-gray-200"

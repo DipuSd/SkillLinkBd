@@ -1,3 +1,10 @@
+/**
+ * Application Controller
+ * 
+ * Manages job applications by providers.
+ * Handles applying, updating status (hired, rejected, withdrawn), and listing applications.
+ */
+
 const createError = require("http-errors");
 const mongoose = require("mongoose");
 const Application = require("../models/Application");
@@ -9,6 +16,15 @@ const Message = require("../models/Message");
 const asyncHandler = require("../utils/asyncHandler");
 const { notifyUser } = require("../services/notificationService");
 
+/**
+ * Helper to delete conversations associated with a job.
+ * Used when an application is withdrawn or a job is completed.
+ * 
+ * @param {Object} params - The parameters object
+ * @param {string} params.jobId - The ID of the job
+ * @param {string[]} [params.participantIds] - Optional array of participant IDs to filter conversations
+ * @returns {Promise<void>}
+ */
 const deleteJobConversations = async ({ jobId, participantIds = [] }) => {
   if (!jobId) {
     return;
@@ -53,6 +69,15 @@ const deleteJobConversations = async ({ jobId, participantIds = [] }) => {
   await Conversation.deleteMany({ _id: { $in: conversationIds } });
 };
 
+/**
+ * Apply to a job
+ * 
+ * Validates job status and existing applications.
+ * Creates an application and notifies the client.
+ * 
+ * @route POST /api/applications
+ * @access Private (Provider only)
+ */
 exports.applyToJob = asyncHandler(async (req, res) => {
   if (req.user.role !== "provider") {
     throw createError(403, "Only providers can apply to jobs");
@@ -115,6 +140,15 @@ exports.applyToJob = asyncHandler(async (req, res) => {
   res.status(201).json({ application });
 });
 
+/**
+ * Get applications
+ * 
+ * Clients see applicants for their jobs.
+ * Providers see their own applications.
+ * 
+ * @route GET /api/applications
+ * @access Private
+ */
 exports.getApplications = asyncHandler(async (req, res) => {
   const { scope, jobId, status } = req.query;
 
@@ -187,6 +221,15 @@ if (scope === "client") {
 res.json({ applications: plainApplications });
 });
 
+/**
+ * Update application status
+ * 
+ * Providers can withdraw or mark complete.
+ * Clients can shortlist, hire, or reject.
+ * 
+ * @route PATCH /api/applications/:applicationId/status
+ * @access Private (Related Client/Provider)
+ */
 exports.updateApplicationStatus = asyncHandler(async (req, res) => {
   const { applicationId } = req.params;
   const { status } = req.body;

@@ -20,6 +20,15 @@ const AuthContext = createContext(null);
 const TOKEN_KEY = "skilllink_access_token";
 const USER_KEY = "skilllink_user";
 
+/**
+ * AuthProvider Component
+ * 
+ * Manages global authentication state.
+ * - Initializes state from localStorage.
+ * - Provides login, register, logout, and profile update methods.
+ * - Persists session token and user data.
+ * - Handles redirection after login/register.
+ */
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() =>
     typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_KEY) : ""
@@ -189,6 +198,13 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/**
+ * useAuth Hook
+ * 
+ * Custom hook to access the authentication context.
+ * @returns {Object} Auth context values (user, token, login, logout, etc.)
+ * @throws {Error} If used outside of AuthProvider
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

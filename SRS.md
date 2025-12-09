@@ -144,9 +144,22 @@ A web-based system connecting clients and providers through skill- and location-
 - password (hashed)  
 - role (client/provider/admin)  
 - location  
+- coordinates (latitude, longitude)
 - skills (array for providers)  
 - rating (float)  
-- is_banned (boolean)  
+- is_banned (boolean)
+- avatar_url
+- bio
+- phone
+- **For Providers:**
+  - experience (years)
+  - hourly_rate
+  - portfolio (array of image URLs)
+  - certifications (array of file URLs)
+  - total_earnings
+  - completed_jobs_count
+- **For Clients:**
+  - total_spent
 - created_at  
 
 ### **Job Table**
@@ -158,23 +171,51 @@ A web-based system connecting clients and providers through skill- and location-
 - budget  
 - duration  
 - location  
-- status (open/in-progress/completed)  
+- status (open/in-progress/completed/cancelled)
+- **payment_status** (pending/paid)
+- **payment_date**
+- **payment_amount**
+- assigned_provider_id (FK → User)
 - created_at  
+
+### **Direct Job Table**
+- direct_job_id (PK)
+- client_id (FK → User)
+- provider_id (FK → User)
+- title
+- description
+- budget
+- location
+- preferred_date
+- notes
+- status (requested/in-progress/completed/declined/cancelled)
+- **payment_status** (pending/paid)
+- **payment_date**
+- **payment_amount**
+- created_at
+- completed_at
 
 ### **Application Table**
 - application_id (PK)  
 - job_id (FK)  
 - provider_id (FK)  
 - proposal_message  
-- status (applied/hired/completed)  
+- status (applied/hired/completed/rejected)  
 - applied_at  
 
-### **Chat Table**
-- chat_id (PK)  
-- sender_id (FK)  
-- receiver_id (FK)  
-- message  
-- timestamp  
+### **Conversation Table**
+- conversation_id (PK)
+- participants (array of user IDs)
+- last_message
+- last_message_at
+- created_at
+
+### **Message Table**
+- message_id (PK)
+- conversation_id (FK)
+- sender_id (FK → User)
+- content
+- timestamp
 
 ### **Review Table**
 - review_id (PK)  
@@ -188,13 +229,24 @@ A web-based system connecting clients and providers through skill- and location-
 ### **Report Table**
 - report_id (PK)  
 - reporter_id (FK → User)  
-- reported_user_id (FK → User)  
+- reported_user_id (FK → User)
+- job_id (FK → Job or DirectJob, optional)
 - reason (string)  
 - description (text)  
 - evidence_url (optional)  
 - status (pending/resolved/rejected)  
 - action_taken (warning/suspend/ban)  
 - reviewed_by (admin_id)  
+- created_at
+
+### **Notification Table**
+- notification_id (PK)
+- user_id (FK → User)
+- type (job_update/message/payment/review/report)
+- title
+- message
+- link
+- is_read (boolean)
 - created_at  
 
 ---
@@ -203,34 +255,70 @@ A web-based system connecting clients and providers through skill- and location-
 
 1. **Landing Page** – Hero, how it works, top skills, testimonials.  
 2. **Auth Pages** – Login, Register (Client/Provider), Forgot Password.  
-3. **Client Dashboard** – Post job, manage applicants, view analytics.  
+3. **Client Dashboard** – Post job, manage applicants, view analytics, spending summary.
+4. **Provider Dashboard** – Job recommendations, applications, earnings, direct jobs.
+5. **Profile Pages** – Client and Provider profiles with edit functionality.
+6. **Job Management** – Browse, apply, manage jobs with payment tracking.
+7. **Direct Jobs** – Send/receive invitations, manage private jobs.
+8. **Chat Interface** – Real-time messaging with conversation history.
+9. **Payment Interface** – Mock bKash payment modal for job payments.
+10. **Admin Dashboard** – User management, reports, platform statistics.
 
-## 9. Technologies
+---
+
+## 8. Technologies
 
 | Layer | Technology |
 |-------|-------------|
-| Frontend | React + Tailwind CSS |
-| Backend | Node.js (Express.js) |
-| Database | MongoDB or PostgreSQL |
-| Auth | JWT (JSON Web Token) |
-| Recommendation Engine | Rule-based matching (skills, history) |
+| Frontend | React + Tailwind CSS + React Query |
+| Backend | Node.js (Express.js) + Socket.IO |
+| Database | MongoDB (Mongoose ODM) |
+| Auth | JWT (JSON Web Token) + bcrypt |
+| File Storage | Local file system / Cloud storage |
+| Real-time | Socket.IO for chat and notifications |
+| Payment | Mock bKash integration (ready for real integration) |
+| Recommendation Engine | Rule-based matching (skills, location, history) |
 | Deployment | Vercel / Render / Railway |
 
 ---
 
-## 10. Expected Outcome
+## 9. Expected Outcome
 - Secure, functional web platform connecting clients and local providers.  
 - Job matching, rating, and communication features.  
-- Fully functional admin moderation system for trust and safety.  
+- Fully functional admin moderation system for trust and safety.
+- **Mock payment system** with bKash integration for job payments.
+- **Direct job invitations** for private hiring without public posting.
+- **Comprehensive user profiles** with skills, portfolio, and certifications.
+- **Real-time notifications** for all platform activities.
+- **Payment tracking** with earnings and spending summaries.
 - A project with real-world depth and scalability suitable for academic grading and portfolios.
 
 ---
 
+## 10. Implemented Features (Beyond Initial Scope)
+- ✅ Mock bKash payment integration with payment tracking
+- ✅ Direct job invitations system
+- ✅ Comprehensive user profiles (Client & Provider)
+- ✅ File upload system (avatars, portfolio, certificates)
+- ✅ Real-time notifications using Socket.IO
+- ✅ Payment status tracking (Paid/Unpaid badges)
+- ✅ Earnings and spending analytics
+- ✅ Enhanced reporting system with direct job support
+- ✅ Location picker with map integration
+- ✅ Review reminders for completed jobs
+
+---
+
 ## 11. Future Enhancements
-- Payment integration (bKash/Nagad).  
+- Real payment gateway integration (bKash/Nagad/SSLCommerz).  
 - Mobile app (React Native).  
 - Skill verification and identity badges.  
 - Machine learning–based provider reputation scoring.
+- Advanced analytics and reporting dashboards.
+- Multi-language support (Bangla translation).
+- Email notifications and SMS alerts.
+- Dispute resolution system.
+- Escrow payment system for job security.
 
 ---
 

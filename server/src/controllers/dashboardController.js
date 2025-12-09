@@ -1,3 +1,10 @@
+/**
+ * Dashboard Controller
+ * 
+ * Aggregates data for different user roles (Client, Provider, Admin).
+ * Provides metrics, charts, and summary data.
+ */
+
 const mongoose = require("mongoose");
 const Job = require("../models/Job");
 const Application = require("../models/Application");
@@ -61,6 +68,14 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
+/**
+ * Get Client Dashboard Data
+ * 
+ * Includes active job counts, spendings, and recommended providers.
+ * 
+ * @route GET /api/dashboard/client
+ * @access Private (Client)
+ */
 exports.getClientDashboard = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ client: req.user.id })
     .sort({ createdAt: -1 })
@@ -126,6 +141,14 @@ exports.getClientDashboard = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get Provider Dashboard Data
+ * 
+ * Includes earnings, active applications, and recommended jobs.
+ * 
+ * @route GET /api/dashboard/provider
+ * @access Private (Provider)
+ */
 exports.getProviderDashboard = asyncHandler(async (req, res) => {
   const providerId = req.user.id;
 
@@ -231,6 +254,14 @@ exports.getProviderDashboard = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get Admin Dashboard Data
+ * 
+ * Comprehensive system overview: revenue, user growth, reports, etc.
+ * 
+ * @route GET /api/dashboard/admin
+ * @access Private (Admin)
+ */
 exports.getAdminDashboard = asyncHandler(async (_req, res) => {
   const monthBuckets = buildMonthBuckets();
   const firstBucket = monthBuckets[0];
@@ -393,6 +424,14 @@ exports.getAdminDashboard = asyncHandler(async (_req, res) => {
   });
 });
 
+/**
+ * Get Provider Earnings Details
+ * 
+ * Detailed breakdown of earnings history and completed jobs.
+ * 
+ * @route GET /api/dashboard/provider/earnings
+ * @access Private (Provider)
+ */
 exports.getProviderEarnings = asyncHandler(async (req, res) => {
   const providerId = req.user.id;
 
@@ -463,6 +502,14 @@ exports.getProviderEarnings = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get Client History
+ * 
+ * List of past jobs with status and reviews.
+ * 
+ * @route GET /api/dashboard/client/history
+ * @access Private (Client)
+ */
 exports.getClientHistory = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ client: req.user.id })
     .sort({ createdAt: -1 })
