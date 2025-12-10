@@ -1,4 +1,5 @@
 import Navbar from "../components/Navbar";
+import { Link } from "react-router-dom";
 import { BsStars } from "react-icons/bs";
 import { FaArrowRight } from "react-icons/fa";
 import { FaStar } from "react-icons/fa";
@@ -40,14 +41,14 @@ function HomePage() {
           </div>
           {/* buttons */}
           <div className="flex flex-row space-x-4 py-4">
-            <button className="bg-white py-1 px-3 rounded-lg font-semibold text-blue-400 flex flex-row items-center justify-center space-x-2 cursor-pointer hover:opacity-70">
+            <Link to="/login" className="bg-white py-1 px-3 rounded-lg font-semibold text-blue-400 flex flex-row items-center justify-center space-x-2 cursor-pointer hover:opacity-70">
               <p>I need work</p>
               <FaArrowRight />
-            </button>
-            <button className="bg-white py-1 px-3 rounded-lg font-semibold text-blue-400 border border-white flex flex-row items-center justify-center space-x-2 hover:bg-transparent hover:text-white cursor-pointer">
+            </Link>
+            <Link to="/login" className="bg-white py-1 px-3 rounded-lg font-semibold text-blue-400 border border-white flex flex-row items-center justify-center space-x-2 hover:bg-transparent hover:text-white cursor-pointer">
               <p>I need help</p>
               <FaArrowRight />
-            </button>
+            </Link>
           </div>
           {/* metrics info */}
           <div className="flex flex-row items-center space-x-10">

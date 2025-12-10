@@ -8,6 +8,7 @@
 const mongoose = require("mongoose");
 const Job = require("../models/Job");
 const Application = require("../models/Application");
+const DirectJob = require("../models/DirectJob");
 const Notification = require("../models/Notification");
 const Report = require("../models/Report");
 const Review = require("../models/Review");
@@ -81,14 +82,25 @@ exports.getClientDashboard = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(100);
 
+  const directJobs = await DirectJob.find({ client: req.user.id });
+
   const activeJobs = jobs.filter((job) => job.status === "open");
   const completedJobs = jobs.filter((job) => job.status === "completed");
 
+  const activeDirectJobs = directJobs.filter((job) => ["requested", "in-progress"].includes(job.status));
+  const completedDirectJobs = directJobs.filter((job) => job.status === "completed");
+
   const metrics = {
-    activeJobs: activeJobs.length,
+    activeJobs: activeJobs.length + activeDirectJobs.length,
     totalApplicants: jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0),
-    completedJobs: completedJobs.length,
-    totalSpent: completedJobs.reduce((sum, job) => sum + (job.budget || 0), 0),
+    completedJobs: completedJobs.length + completedDirectJobs.length,
+    totalSpent: 
+      completedJobs
+        .filter(j => j.paymentStatus === "paid")
+        .reduce((sum, job) => sum + (job.paymentAmount || job.budget || 0), 0) +
+      completedDirectJobs
+        .filter(j => j.paymentStatus === "paid")
+        .reduce((sum, job) => sum + (job.paymentAmount || job.budget || 0), 0),
   };
 
   // Get all active providers
@@ -162,12 +174,34 @@ exports.getProviderDashboard = asyncHandler(async (req, res) => {
     status: "completed",
   });
 
+  const completedDirectJobsCount = await DirectJob.countDocuments({
+    provider: providerId,
+    status: "completed"
+  });
+
   const totalEarningsAgg = await Job.aggregate([
-    { $match: { assignedProvider: new mongoose.Types.ObjectId(providerId), status: "completed" } },
-    { $group: { _id: null, total: { $sum: "$budget" } } },
+    { 
+      $match: { 
+        assignedProvider: new mongoose.Types.ObjectId(providerId), 
+        status: "completed",
+        paymentStatus: "paid" 
+      } 
+    },
+    { $group: { _id: null, total: { $sum: "$paymentAmount" } } },
   ]);
 
-  const totalEarnings = totalEarningsAgg[0]?.total ?? 0;
+  const totalDirectEarningsAgg = await DirectJob.aggregate([
+    { 
+      $match: { 
+        provider: new mongoose.Types.ObjectId(providerId), 
+        status: "completed", 
+        paymentStatus: "paid" 
+      } 
+    },
+    { $group: { _id: null, total: { $sum: "$paymentAmount" } } },
+  ]);
+
+  const totalEarnings = (totalEarningsAgg[0]?.total ?? 0) + (totalDirectEarningsAgg[0]?.total ?? 0);
 
   const ongoingJobs = await Job.find({
     assignedProvider: providerId,
@@ -231,7 +265,7 @@ exports.getProviderDashboard = asyncHandler(async (req, res) => {
     subheading: "You have personalised job recommendations waiting.",
     metrics: {
       activeApplications,
-      completedJobs,
+      completedJobs: completedJobs + completedDirectJobsCount,
       totalEarnings,
       averageRating: req.user.rating || 0,
     },
@@ -442,27 +476,54 @@ exports.getProviderEarnings = asyncHandler(async (req, res) => {
     jobsCompleted: 0,
   };
 
-  const completedJobs = await Job.find({
+  const jobPromise = Job.find({
     assignedProvider: providerId,
     status: "completed",
+    paymentStatus: "paid",
   })
-    .sort({ completedAt: -1, updatedAt: -1 })
-    .limit(50)
+    .sort({ paymentDate: -1, updatedAt: -1 }) // Sort by payment date
     .populate({ path: "client", select: "name" });
 
-  metrics.jobsCompleted = completedJobs.length;
-  metrics.totalEarnings = completedJobs.reduce((sum, job) => sum + (job.budget || 0), 0);
+  const directJobPromise = DirectJob.find({
+    provider: providerId,
+    status: "completed",
+    paymentStatus: "paid",
+  })
+    .sort({ paymentDate: -1, updatedAt: -1 })
+    .populate({ path: "client", select: "name" });
+
+  const [jobs, directJobs] = await Promise.all([jobPromise, directJobPromise]);
+
+  // Merge and normalize structure
+  const allCompletedJobs = [
+    ...jobs.map(j => ({
+      ...j.toObject(),
+      type: "job",
+      finalAmount: j.paymentAmount || j.budget || 0,
+      date: j.paymentDate || j.updatedAt
+    })),
+    ...directJobs.map(j => ({
+      ...j.toObject(),
+      type: "direct",
+      finalAmount: j.paymentAmount || j.budget || 0,
+      date: j.paymentDate || j.updatedAt
+    }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+
+  metrics.jobsCompleted = allCompletedJobs.length;
+  metrics.totalEarnings = allCompletedJobs.reduce((sum, job) => sum + job.finalAmount, 0);
 
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  metrics.thisMonth = completedJobs
+  metrics.thisMonth = allCompletedJobs
     .filter((job) => {
-      const date = job.updatedAt || job.createdAt;
+      const date = new Date(job.date);
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     })
-    .reduce((sum, job) => sum + (job.budget || 0), 0);
+    .reduce((sum, job) => sum + job.finalAmount, 0);
 
   const months = Array.from({ length: 6 }).map((_, index) => {
     const date = new Date(currentYear, currentMonth - (5 - index), 1);
@@ -470,10 +531,10 @@ exports.getProviderEarnings = asyncHandler(async (req, res) => {
     return { key, label: date.toLocaleString("en-US", { month: "short" }) };
   });
 
-  const earningsByMonth = completedJobs.reduce((acc, job) => {
-    const date = job.updatedAt || job.createdAt;
+  const earningsByMonth = allCompletedJobs.reduce((acc, job) => {
+    const date = new Date(job.date);
     const key = `${date.getFullYear()}-${date.getMonth()}`;
-    acc[key] = (acc[key] || 0) + (job.budget || 0);
+    acc[key] = (acc[key] || 0) + job.finalAmount;
     return acc;
   }, {});
 
@@ -482,15 +543,24 @@ exports.getProviderEarnings = asyncHandler(async (req, res) => {
     earnings: earningsByMonth[month.key] || 0,
   }));
 
+  // Fetch reviews for normal jobs only (as reviews for direct jobs are handled differently or might not exist in same structure yet)
+  // For simplicity, we just list them. If we want ratings for direct jobs, we need to fetch reviews for them too.
+  
   const recentJobs = await Promise.all(
-    completedJobs.slice(0, 5).map(async (job) => {
-      const review = await Review.findOne({ job: job.id, provider: providerId });
-      return {
+    allCompletedJobs.slice(0, 50).map(async (job) => { // Increased limit for detailed view
+       let rating = null;
+       // Only fetch review for normal jobs for now, or if DirectJobs have reviews in same collection
+       const review = await Review.findOne({ job: job._id, provider: providerId });
+       if (review) rating = review.rating;
+       
+       return {
+        id: job._id,
         job: job.title,
         client: job.client?.name,
-        date: job.updatedAt,
-        payment: job.budget,
-        rating: review?.rating,
+        date: job.date,
+        payment: job.finalAmount,
+        rating: rating,
+        type: job.type
       };
     })
   );
@@ -498,7 +568,7 @@ exports.getProviderEarnings = asyncHandler(async (req, res) => {
   res.json({
     metrics,
     chart,
-    recentJobs,
+    recentJobs: recentJobs.slice(0, 10), // Limit recent list for UI
   });
 });
 

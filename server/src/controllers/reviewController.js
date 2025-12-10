@@ -8,6 +8,7 @@
 const createError = require("http-errors");
 const Review = require("../models/Review");
 const Job = require("../models/Job");
+const DirectJob = require("../models/DirectJob");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 
@@ -23,12 +24,23 @@ const asyncHandler = require("../utils/asyncHandler");
 exports.createReview = asyncHandler(async (req, res) => {
   const { jobId, rating, comment } = req.body;
 
-  const job = await Job.findById(jobId);
+  let job = await Job.findById(jobId);
+  let isDirectJob = false;
+
+  if (!job) {
+    job = await DirectJob.findById(jobId);
+    isDirectJob = true;
+  }
+
   if (!job) {
     throw createError(404, "Job not found");
   }
 
-  if (!job.assignedProvider) {
+  const assignedProviderId = isDirectJob
+    ? job.provider?.toString()
+    : job.assignedProvider?._id?.toString() || job.assignedProvider?.toString();
+
+  if (!assignedProviderId) {
     throw createError(400, "No provider is assigned to this job");
   }
 
@@ -49,29 +61,42 @@ exports.createReview = asyncHandler(async (req, res) => {
     throw createError(403, "You cannot review this job");
   }
 
-  const assignedProviderId = job.assignedProvider?._id?.toString() || job.assignedProvider?.toString();
-
   if (isProviderReviewer && assignedProviderId !== req.user.id) {
     throw createError(403, "You can only review jobs you were assigned to");
   }
 
-  const existing = await Review.findOne({ job: jobId, reviewerRole });
-  if (existing) {
-    throw createError(400, "You have already reviewed this job");
+  let review = await Review.findOne({ job: jobId, reviewerRole });
+  const targetUserId =
+    reviewerRole === "client" ? assignedProviderId : job.client;
+  const targetUser = await User.findById(targetUserId);
+
+  if (review) {
+    // Update existing review
+    const oldRating = review.rating;
+    const currentTotalScore = (targetUser.rating || 0) * (targetUser.totalRatings || 0);
+    const newTotalScore = currentTotalScore - oldRating + rating;
+    // Count remains the same
+    const newAverage = newTotalScore / (targetUser.totalRatings || 1);
+
+    review.rating = rating;
+    review.comment = comment;
+    await review.save();
+
+    targetUser.rating = Number(newAverage.toFixed(2));
+    await targetUser.save({ validateBeforeSave: false });
+
+    return res.json({ review });
   }
 
-  const review = await Review.create({
+  // Create new review
+  review = await Review.create({
     job: jobId,
     client: job.client,
-    provider: job.assignedProvider,
+    provider: assignedProviderId,
     reviewerRole,
     rating,
     comment,
   });
-
-  const targetUserId =
-    reviewerRole === "client" ? job.assignedProvider : job.client;
-  const targetUser = await User.findById(targetUserId);
 
   const totalRatings = (targetUser.totalRatings || 0) + 1;
   const currentAggregate = (targetUser.rating || 0) * (targetUser.totalRatings || 0);

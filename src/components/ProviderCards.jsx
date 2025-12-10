@@ -21,6 +21,7 @@ const statusVariants = {
  * @param {Function} onHire - Callback to hire provider
  * @param {string} [contactLabel="Contact"] - Label for contact button
  * @param {string} [hireLabel="Hire Now"] - Label for hire button
+ * @param {Object} [activeProviders={}] - Map of providerId to status string
  */
 function ProviderCards({
   providers = [],
@@ -28,6 +29,7 @@ function ProviderCards({
   onHire,
   contactLabel = "Contact",
   hireLabel = "Hire Now",
+  activeProviders = {},
 }) {
   if (!providers.length) {
     return (
@@ -116,9 +118,18 @@ function ProviderCards({
               </button>
               <button
                 onClick={() => onHire?.(provider)}
-                className="rounded-xl px-4 py-2 bg-cyan-500 text-white hover:opacity-90 flex-1 cursor-pointer transition-all duration-200 font-semibold"
+                disabled={activeProviders?.[provider._id]}
+                className={`rounded-xl px-4 py-2 flex-1 cursor-pointer transition-all duration-200 font-semibold ${
+                  activeProviders?.[provider._id]
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-cyan-500 text-white hover:opacity-90"
+                }`}
               >
-                {hireLabel}
+                {activeProviders?.[provider._id]
+                  ? activeProviders[provider._id] === "requested"
+                    ? "Invited"
+                    : "Active Job"
+                  : hireLabel}
               </button>
             </div>
           </div>

@@ -208,7 +208,7 @@ export default function ClientProfile() {
           <span className="text-lg font-semibold text-gray-700">Location</span>
           {isEditing ? (
             <LocationPicker
-              onLocationSelect={(data) => {
+              onChange={(data) => {
                 setLocationData(data);
                 setForm((prev) => ({ ...prev, location: data.locationName }));
               }}

@@ -12,7 +12,9 @@ import {
 import PaymentModal from "../../components/PaymentModal";
 import ReportUserModal from "../../components/ReportUserModal";
 import { createReport } from "../../api/reports";
-
+import InviteProviderModal from "../../components/InviteProviderModal";
+import ReviewModal from "../../components/ReviewModal";
+import { createReview } from "../../api/reviews";
 const skillOptions = [
   { value: "", label: "All occupations" },
   { value: "electrician", label: "Electrician" },
@@ -48,8 +50,21 @@ export default function ClientBrowseProviders() {
   const [inviteForm, setInviteForm] = useState(inviteInitialState);
   const [paymentJob, setPaymentJob] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
+  const [reviewTarget, setReviewTarget] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  const reviewMutation = useMutation({
+    mutationFn: createReview,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["direct-jobs", "client"] });
+      setReviewTarget(null);
+      alert("Review submitted successfully!");
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || "Failed to submit review");
+    },
+  });
 
   const providersQuery = useQuery({
     queryKey: ["provider-search", filters],
@@ -137,6 +152,20 @@ export default function ClientBrowseProviders() {
       ),
     [directJobs]
   );
+
+  const activeProviderMap = useMemo(() => {
+    const map = {};
+    if (!directJobs) return map;
+    directJobs.forEach((job) => {
+      if (
+        ["requested", "in-progress"].includes(job.status) &&
+        job.provider?._id
+      ) {
+        map[job.provider._id] = job.status;
+      }
+    });
+    return map;
+  }, [directJobs]);
 
   const historyInvites = useMemo(
     () =>
@@ -284,7 +313,7 @@ export default function ClientBrowseProviders() {
             <ProviderCards
               providers={providers}
               onContact={(provider) =>
-                navigate(`/client/chat?user=${provider._id}`)
+                navigate(`/client/provider/${provider._id}`)
               }
               onHire={(provider) => {
                 setInviteTarget(provider);
@@ -293,8 +322,9 @@ export default function ClientBrowseProviders() {
                   title: `Work request for ${provider.primarySkill || "job"}`,
                 }));
               }}
-              contactLabel="Message"
+              contactLabel="View Profile"
               hireLabel="Send Invite"
+              activeProviders={activeProviderMap}
             />
           </div>
         )}
@@ -358,6 +388,11 @@ export default function ClientBrowseProviders() {
                   providerId: job.provider?._id,
                   providerName: job.provider?.name,
                 })}
+                onRate={!job.review ? () => setReviewTarget({
+                  id: job._id,
+                  title: job.title,
+                  userName: job.provider?.name
+                }) : undefined}
               />
             ))}
           </div>
@@ -406,11 +441,20 @@ export default function ClientBrowseProviders() {
         }}
         isSubmitting={reportMutation.isPending}
       />
+
+      <ReviewModal
+        isOpen={Boolean(reviewTarget)}
+        onClose={() => setReviewTarget(null)}
+        job={reviewTarget}
+        onSubmit={(data) => reviewMutation.mutate({ ...data, jobId: reviewTarget.id })}
+        isSubmitting={reviewMutation.isPending}
+        error={reviewMutation.error?.response?.data?.message}
+      />
     </div>
   );
 }
 
-function DirectJobCard({ job, onMessage, onCancel, onPay, onReport, showCancel, isCancelling }) {
+function DirectJobCard({ job, onMessage, onCancel, onPay, onReport, onRate, showCancel, isCancelling }) {
   return (
     <div className="p-4 rounded-2xl border border-gray-200 bg-white flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -488,6 +532,15 @@ function DirectJobCard({ job, onMessage, onCancel, onPay, onReport, showCancel, 
             {isCancelling ? "Cancelling..." : "Cancel invite"}
           </button>
         ) : null}
+        {job.status === "completed" && onRate ? (
+          <button
+            type="button"
+            onClick={onRate}
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-amber-600 hover:bg-amber-500 hover:text-white transition-colors"
+          >
+            Rate
+          </button>
+        ) : null}
         {job.status === "completed" && onReport ? (
           <button
             type="button"
@@ -502,129 +555,6 @@ function DirectJobCard({ job, onMessage, onCancel, onPay, onReport, showCancel, 
   );
 }
 
-function InviteProviderModal({
-  provider,
-  formData,
-  onChange,
-  onClose,
-  onSubmit,
-  isSubmitting,
-  error,
-}) {
-  if (!provider) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6 space-y-4 relative">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-        >
-          ×
-        </button>
-        <div>
-          <p className="text-sm text-gray-500">Invite</p>
-          <h2 className="text-2xl font-semibold text-gray-900">
-            {provider.name}
-          </h2>
-          <p className="text-gray-500 text-sm">
-            This request goes straight to the provider. It won't appear on the
-            public job board.
-          </p>
-        </div>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-gray-700">
-                Job title
-              </span>
-              <input
-                name="title"
-                value={formData.title}
-                onChange={onChange}
-                required
-                placeholder="e.g., Fix kitchen wiring"
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-gray-700">
-                Budget (BDT)
-              </span>
-              <input
-                type="number"
-                min={0}
-                name="budget"
-                value={formData.budget}
-                onChange={onChange}
-                placeholder="Optional"
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-              />
-            </label>
-          </div>
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-gray-700">
-              Description
-            </span>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={onChange}
-              rows={4}
-              required
-              placeholder="Describe the scope, materials, schedule expectations..."
-              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-y"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-gray-700">
-              Preferred date
-            </span>
-            <input
-              type="date"
-              name="preferredDate"
-              value={formData.preferredDate}
-              onChange={onChange}
-              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-gray-700">
-              Notes (optional)
-            </span>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={onChange}
-              rows={3}
-              placeholder="Any extra requirements or helpful context"
-              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-y"
-            />
-          </label>
-          {error ? (
-            <p className="text-sm text-red-500 font-semibold">{error}</p>
-          ) : null}
-          <div className="flex gap-3 justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-teal-500 text-white font-semibold hover:opacity-90 disabled:opacity-60"
-            >
-              {isSubmitting ? "Sending..." : "Send invite"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 

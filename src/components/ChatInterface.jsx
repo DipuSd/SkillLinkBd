@@ -365,7 +365,7 @@ function ChatInterface() {
             </div>
 
             {activeConversation?.job &&
-            ["completed", "cancelled", "rejected", "withdrawn"].includes(
+            ["completed", "cancelled", "rejected", "withdrawn", "declined"].includes(
               activeConversation.job.status
             ) ? (
               <div className="px-4 py-3 bg-yellow-50 border-t border-yellow-200 text-sm text-yellow-800">

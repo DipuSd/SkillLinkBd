@@ -127,10 +127,19 @@ exports.updateReport = asyncHandler(async (req, res) => {
 
   if (actionTaken && ["suspend", "ban"].includes(actionTaken)) {
     const nextStatus = actionTaken === "ban" ? "banned" : "suspended";
-    await User.findByIdAndUpdate(report.reportedUser, {
+    const updateData = {
       status: nextStatus,
       isBanned: nextStatus === "banned",
-    });
+    };
+
+    if (nextStatus === "banned") {
+      const userToBan = await User.findById(report.reportedUser);
+      if (userToBan && !userToBan.name.toLowerCase().includes("(banned)")) {
+        updateData.name = `${userToBan.name} (Banned)`;
+      }
+    }
+
+    await User.findByIdAndUpdate(report.reportedUser, updateData);
   }
 
   const reporterNotification = notifyUser({

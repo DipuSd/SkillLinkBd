@@ -145,6 +145,12 @@ exports.updateUserStatus = asyncHandler(async (req, res) => {
     throw createError(404, "User not found");
   }
 
+  if (status === "banned" && !user.name.toLowerCase().includes("(banned)")) {
+    user.name = `${user.name} (Banned)`;
+  } else if (status === "active" && user.name.toLowerCase().includes("(banned)")) {
+    user.name = user.name.replace(/\s*\(Banned\)/i, "");
+  }
+
   user.status = status;
   user.isBanned = status === "banned";
   await user.save({ validateBeforeSave: false });

@@ -34,13 +34,13 @@ function Navbar() {
         {/* link and button holder */}
         <div className="flex items-center gap-2 font-semibold">
           <Link
-            to="/#how-it-works"
+            to="/about"
             className="px-3 py-2 hover:bg-green-400 rounded-lg hover:text-white transition-all duration-200 text-sm md:text-base"
           >
             About
           </Link>
           <Link
-            to="/#contact"
+            to="/contact"
             className="px-3 py-2 hover:bg-green-400 rounded-lg hover:text-white transition-all duration-200 text-sm md:text-base"
           >
             Contact

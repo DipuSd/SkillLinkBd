@@ -6,14 +6,26 @@ import { LuDollarSign } from "react-icons/lu";
 import { BsStars } from "react-icons/bs";
 import { FaArrowRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardMetricsCard from "../../components/DashboardMetricsCard";
 import ProviderCards from "../../components/ProviderCards";
 import ActivejobsCard from "../../components/ActiveJobsCard";
 import { getClientDashboard } from "../../api/dashboard";
+import { getDirectJobs, createDirectJob } from "../../api/directJobs";
 import { useAuth } from "../../context/AuthContext";
 import WarningBanner from "../../components/WarningBanner";
 import { markNotificationRead } from "../../api/notifications";
+import InviteProviderModal from "../../components/InviteProviderModal";
+
+const inviteInitialState = {
+  title: "",
+  description: "",
+  budget: "",
+  location: "",
+  preferredDate: "",
+  notes: "",
+};
 
 function ClientDashboard() {
   const navigate = useNavigate();
@@ -26,6 +38,26 @@ function ClientDashboard() {
     staleTime: 30_000,
   });
 
+  const { data: directJobsData } = useQuery({
+    queryKey: ["direct-jobs", "client"],
+    queryFn: () => getDirectJobs({ scope: "client" }),
+  });
+
+  const activeProviderMap = useMemo(() => {
+    const map = {};
+    const directJobs = directJobsData?.directJobs ?? [];
+    if (!directJobs) return map;
+    directJobs.forEach((job) => {
+      if (
+        ["requested", "in-progress"].includes(job.status) &&
+        job.provider?._id
+      ) {
+        map[job.provider._id] = job.status;
+      }
+    });
+    return map;
+  }, [directJobsData]);
+
   const dismissWarningMutation = useMutation({
     mutationFn: (notificationId) => markNotificationRead(notificationId),
     onSuccess: () => {
@@ -33,10 +65,41 @@ function ClientDashboard() {
     },
   });
 
+  const [inviteTarget, setInviteTarget] = useState(null);
+  const [inviteForm, setInviteForm] = useState(inviteInitialState);
+
   const handleDismissWarning = (warning) => {
     const notificationId = warning?._id ?? warning?.id;
     if (!notificationId) return;
     dismissWarningMutation.mutate(notificationId);
+  };
+
+  const inviteMutation = useMutation({
+    mutationFn: createDirectJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
+      setInviteTarget(null);
+      setInviteForm(inviteInitialState);
+      alert("Invitation sent successfully!");
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || "Failed to send invitation");
+    },
+  });
+
+  const handleInviteInput = (event) => {
+    const { name, value } = event.target;
+    setInviteForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleInviteSubmit = async (event) => {
+    event.preventDefault();
+    if (!inviteTarget?._id) return;
+    await inviteMutation.mutateAsync({
+      providerId: inviteTarget._id,
+      ...inviteForm,
+      budget: inviteForm.budget ? Number(inviteForm.budget) : undefined,
+    });
   };
 
   const metrics = [
@@ -124,14 +187,19 @@ function ClientDashboard() {
           <div className="my-5 flex flex-col lg:flex-row gap-3">
             <ProviderCards
               providers={providers}
-              onHire={(provider) =>
-                navigate(`/client/applicants?pref=${provider._id}`)
-              }
+              onHire={(provider) => {
+                setInviteTarget(provider);
+                setInviteForm((prev) => ({
+                  ...prev,
+                  title: `Work request for ${provider.primarySkill || "job"}`,
+                }));
+              }}
               onContact={(provider) =>
-                navigate(`/client/chat?user=${provider._id}`)
+                navigate(`/client/provider/${provider._id}`)
               }
-              contactLabel="Message"
+              contactLabel="View Profile"
               hireLabel="Invite to Job"
+              activeProviders={activeProviderMap}
             />
           </div>
         </div>
@@ -163,6 +231,21 @@ function ClientDashboard() {
           />
         </div>
       </div>
+      
+      {inviteTarget ? (
+        <InviteProviderModal
+          provider={inviteTarget}
+          formData={inviteForm}
+          onChange={handleInviteInput}
+          onClose={() => {
+            if (inviteMutation.isPending) return;
+            setInviteTarget(null);
+          }}
+          onSubmit={handleInviteSubmit}
+          isSubmitting={inviteMutation.isPending}
+          error={inviteMutation.error?.response?.data?.message}
+        />
+      ) : null}
     </>
   );
 }

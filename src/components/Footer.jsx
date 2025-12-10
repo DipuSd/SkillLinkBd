@@ -1,4 +1,5 @@
 import { FaBoltLightning } from "react-icons/fa6";
+import { Link } from "react-router-dom";
 import { LuCopyright } from "react-icons/lu";
 
 /**
@@ -28,31 +29,31 @@ function Footer() {
         {/* quick link section */}
         <div className="space-y-2 flex flex-col">
           <h2 className="text-white mt-5">Quick Links</h2>
-          <a href="#" className="text-gray-500 hover:text-white">
+          <Link to="/about" className="text-gray-500 hover:text-white">
             About
-          </a>
-          <a href="#" className="text-gray-500 hover:text-white">
+          </Link>
+          <Link to="/contact" className="text-gray-500 hover:text-white">
             Contact
-          </a>
-          <a href="#" className="text-gray-500 hover:text-white">
+          </Link>
+          <Link to="/login" className="text-gray-500 hover:text-white">
             Login
-          </a>
-          <a href="#" className="text-gray-500 hover:text-white">
+          </Link>
+          <Link to="/signup" className="text-gray-500 hover:text-white">
             Register
-          </a>
+          </Link>
         </div>
         {/* for worker section */}
         <div className="space-y-2 flex flex-col">
           <h2 className="text-white mt-5">For Workers</h2>
-          <a href="#" className="text-gray-500 hover:text-white">
+          <Link to="/login" className="text-gray-500 hover:text-white">
             Find Jobs
-          </a>
-          <a href="#" className="text-gray-500 hover:text-white">
+          </Link>
+          <Link to="/" className="text-gray-500 hover:text-white">
             How it works
-          </a>
-          <a href="#" className="text-gray-500 hover:text-white">
+          </Link>
+          <Link to="/" className="text-gray-500 hover:text-white">
             Success Stories
-          </a>
+          </Link>
         </div>
         {/* copyright section */}
         <hr className="text-gray-400 mt-5" />

@@ -8,6 +8,7 @@
 const createError = require("http-errors");
 const DirectJob = require("../models/DirectJob");
 const User = require("../models/User");
+const Review = require("../models/Review");
 const asyncHandler = require("../utils/asyncHandler");
 const { notifyUser } = require("../services/notificationService");
 
@@ -97,7 +98,25 @@ exports.listDirectJobs = asyncHandler(async (req, res) => {
     .populate({ path: "client", select: "name email location" })
     .populate({ path: "provider", select: "name skills rating location avatarUrl hourlyRate" });
 
-  res.json({ directJobs });
+  // Attach reviews if any
+  const jobIds = directJobs.map(job => job.id);
+  const reviews = await Review.find({ 
+    job: { $in: jobIds },
+    reviewerRole: req.user.role // Only show if *this* user has reviewed
+  });
+
+  const reviewMap = reviews.reduce((acc, review) => {
+    acc[review.job.toString()] = review;
+    return acc;
+  }, {});
+
+  const jobsWithReview = directJobs.map(job => {
+    const jobObj = job.toObject();
+    jobObj.review = reviewMap[job.id] || null;
+    return jobObj;
+  });
+
+  res.json({ directJobs: jobsWithReview });
 });
 
 /**
